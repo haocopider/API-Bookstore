@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PinkWater.Pages.ProductDetail"
+             BackgroundColor="#43b7ff">
+    <Grid RowDefinitions="*, Auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout>
+
+                <VerticalStackLayout BackgroundColor="White" Padding="0,0,0,15">
+
+                    <Image Source="{Binding Book.CoverImageUrl, TargetNullValue='https://down-vn.img.susercontent.com/file/a2d5109ed55d6c144e79a216fa03981d'}"
+                           HeightRequest="380"
+                           Aspect="AspectFill"
+                           HorizontalOptions="Fill" />
+
+                    <VerticalStackLayout Padding="15,10" Spacing="5">
+                        <Label Text="{Binding Book.MinPrice, StringFormat='{0:N0} ₫'}" 
+                               FontSize="24" 
+                               TextColor="#EE4D2D" 
+                               FontAttributes="Bold" />
+
+                        <Label Text="{Binding Book.Title}" 
+                               FontSize="16" 
+                               TextColor="#222"
+                               LineBreakMode="WordWrap" />
+
+                        <HorizontalStackLayout Spacing="10" Margin="0,5,0,0">
+                            <Label Text="⭐ 5.0" FontSize="12" TextColor="#FFD700" />
+                            <Label Text="|" TextColor="LightGray" FontSize="12" />
+                            <Label Text="Đã bán 1,2k" FontSize="12" TextColor="Gray" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="Auto, *, Auto" BackgroundColor="White" Padding="15" HeightRequest="50">
+                    <Label Grid.Column="0" Text="Phân loại" TextColor="Gray" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="Chọn định dạng sách" TextColor="#222" Margin="15,0,0,0" VerticalOptions="Center" />
+                    <Label Grid.Column="2" Text="&#xf0142;" FontFamily="MDI" TextColor="Gray" VerticalOptions="Center" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto, *, Auto" BackgroundColor="White" Padding="15" ColumnSpacing="15">
+                    <Border Grid.Column="0" HeightRequest="50" WidthRequest="50">
+                        <Image Source="https://via.placeholder.com/50" Aspect="AspectFill" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                        <Label Text="{Binding Book.AuthorName}" FontAttributes="Bold" FontSize="14" />
+                        <Label Text="Tác giả" TextColor="Gray" FontSize="12" />
+                    </VerticalStackLayout>
+                    <Border Grid.Column="2" Stroke="#EE4D2D" StrokeThickness="1" BackgroundColor="Transparent" Padding="10,5" StrokeShape="RoundRectangle 4" VerticalOptions="Center">
+                        <Label Text="Xem trang" TextColor="#EE4D2D" FontSize="12" />
+                    </Border>
+                </Grid>
+
+                <VerticalStackLayout BackgroundColor="White" Padding="15">
+                    <Label Text="Chi tiết sản phẩm" FontAttributes="Bold" FontSize="14" Margin="0,0,0,10" />
+                    <Label Text="{Binding Book.Description}" 
+                           TextColor="#444" 
+                           FontSize="14" 
+                           LineHeight="1.4" />
+                </VerticalStackLayout>
+
+                <BoxView HeightRequest="20" Color="Transparent" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" StrokeThickness="0" BackgroundColor="White">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,-2" Radius="5" Opacity="0.1" />
+            </Border.Shadow>
+
+            <Grid ColumnDefinitions="60, 60, *, *" HeightRequest="55">
+
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" HorizontalOptions="Center">
+                    <Label Text="&#xf036c;" FontFamily="MDI" FontSize="20" TextColor="#00B0FF" HorizontalOptions="Center" />
+                    <Label Text="Chat ngay" FontSize="9" TextColor="Gray" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+                <BoxView Grid.Column="1" WidthRequest="1" Color="#EEEEEE" HorizontalOptions="Start" />
+
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center">
+                    <Label Text="&#xf0110;" FontFamily="MDI" FontSize="20" TextColor="#EE4D2D" HorizontalOptions="Center" />
+                    <Label Text="Thêm giỏ" FontSize="9" TextColor="Gray" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="2" 
+                        Text="Thêm vào giỏ hàng" 
+                        Command="{Binding AddToCartCommand}"
+                        BackgroundColor="#FFECE9" 
+                        TextColor="#EE4D2D" 
+                        CornerRadius="0" 
+                        FontSize="12" />
+
+                <Button Grid.Column="3" 
+                        Text="Mua ngay" 
+                        BackgroundColor="#EE4D2D" 
+                        TextColor="White" 
+                        CornerRadius="0" 
+                        FontSize="12" 
+                        FontAttributes="Bold" />
+            </Grid>
+        </Border>
+
+    </Grid>
+</ContentPage>

@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PinkWater.ViewModels"
+             x:Class="PinkWater.MainPage"
+             BackgroundColor="#43b7ff">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+
+        <Border Grid.Row="0" Padding="5, 10" StrokeThickness="0">
+            <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="15" VerticalOptions="Center">
+                <Border Grid.Column="0" BackgroundColor="White" Padding="10, 0" StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="3">
+                        <Label Grid.Column="0" Text="&#xF0349;" FontFamily="MDI" FontSize="30" VerticalOptions="Center" TextColor="Gray"/>
+                        <Entry Grid.Column="1" Text="Hello ae" TextColor="Black" BackgroundColor="Transparent" FontSize="14" VerticalOptions="Center" VerticalTextAlignment="Center"/>
+                        <Label Grid.Column="2" Text="&#xF0D5D;" FontFamily="MDI" FontSize="30" VerticalOptions="Center" TextColor="Gray"/>
+                    </Grid>
+                </Border>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center">
+                    <VerticalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoToCartCommand}" />
+                    </VerticalStackLayout.GestureRecognizers>
+
+                    <Label Text="&#xf0110;" FontFamily="MDI" FontSize="20" TextColor="#EE4D2D" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+                <Label Padding="0, 10" Grid.Column="2" Text="&#xF12CA;" FontFamily="MDI"  FontSize="30" TextColor="Black" HorizontalOptions="Center"/>
+            </Grid>
+        </Border>
+
+        <ActivityIndicator Grid.Row="1"
+                       IsRunning="{Binding IsBusy}" 
+                       IsVisible="{Binding IsBusy}" 
+                       Color="#EE4D2D" 
+                       VerticalOptions="Start"
+                       HorizontalOptions="Center"
+                       ZIndex="1" />
+
+        <CollectionView Grid.Row="1"
+                        Margin="5, 0, 5, 0"
+                    ItemsSource="{Binding Books}"
+                    IsVisible="{Binding IsNotEmpty}">
+
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" 
+                             Span="2" 
+                             HorizontalItemSpacing="5" 
+                             VerticalItemSpacing="5" />
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeShape="RoundRectangle 8"
+                        StrokeThickness="0"
+                        BackgroundColor="White"
+                        >
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer 
+                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=GoToDetailCommand}"
+                CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Border.Shadow>
+                            <Shadow Brush="Black" Offset="2,2" Radius="5" Opacity="0.1" />
+                        </Border.Shadow>
+
+                        <VerticalStackLayout Spacing="5">
+                            <Image Source="https://down-vn.img.susercontent.com/file/a2d5109ed55d6c144e79a216fa03981d"
+                               HeightRequest="180"
+                               Aspect="AspectFill"
+                               HorizontalOptions="Fill" />
+
+                            <VerticalStackLayout Padding="8" Spacing="4">
+                                <Label Text="{Binding Title}" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="#222"
+                                   LineBreakMode="TailTruncation"
+                                   MaxLines="2"
+                                   HeightRequest="40" />
+
+                                <Label Text="{Binding AuthorName}" 
+                                   FontSize="12" 
+                                   TextColor="Gray" />
+
+                                <Label Text="{Binding MinPrice, StringFormat='{0:N0} ₫'}" 
+                                   FontSize="16" 
+                                   TextColor="#EE4D2D" 
+                                   FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <VerticalStackLayout Grid.Row="1" 
+                         IsVisible="{Binding IsEmpty}" 
+                         VerticalOptions="Center" 
+                         HorizontalOptions="Center">
+            <Label Text="Chưa có sản phẩm nào" TextColor="Gray" />
+        </VerticalStackLayout>
+
+        <Border Grid.Row="2" StrokeThickness="0">
+            <Grid ColumnDefinitions="*, *, *, *, *" BackgroundColor="White" Padding="0, 0, 0, 0">
+
+                <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Padding="10">
+                    <VerticalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=NavigateCommand}" CommandParameter="Home" />
+                    </VerticalStackLayout.GestureRecognizers>
+                    <Label Text="&#xf02dc;" FontFamily="MDI" FontSize="30" TextColor="Gray" HorizontalOptions="Center"/>
+                    <Label Text="Home" TextColor="#EE4D2D" FontSize="10" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Padding="10">
+                    <Label Text="&#xF11D5;" FontFamily="MDI"  FontSize="30" TextColor="Gray" HorizontalOptions="Center"/>
+                    <Label Text="Mall" TextColor="#00B0FF" FontSize="10" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Padding="10">
+                    <Label Text="&#xF040B;" FontFamily="MDI"  FontSize="30" TextColor="Gray" HorizontalOptions="Center"/>
+                    <Label Text="Live" TextColor="#00B0FF" FontSize="10" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Padding="10">
+                    <Grid>
+                        <Label Text="&#xF009C;" FontFamily="MDI"  FontSize="30" TextColor="Gray" HorizontalOptions="Center"/>
+                        <Border StrokeShape="RoundRectangle 10" BackgroundColor="#EE4D2D" HeightRequest="16" WidthRequest="16" HorizontalOptions="End" TranslationX="8" TranslationY="-8">
+                            <Label Text="24" TextColor="White" FontSize="9" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                    <Label Text="Thông báo" TextColor="#00B0FF" FontSize="10" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="4" HorizontalOptions="Center"  Padding="10">
+                    <Label Text="&#xF0013;" FontFamily="MDI"  FontSize="30" TextColor="Gray" HorizontalOptions="Center"/>
+                    <Label Text="Tôi" TextColor="#00B0FF" FontSize="10" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+            </Grid>
+
+        </Border>
+
+    </Grid>
+</ContentPage>

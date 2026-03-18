@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PinkWater.Pages.Cart"
+             xmlns:vm="clr-namespace:PinkWater.ViewModels"
+             Title="Cart">
+    <Grid RowDefinitions="*, Auto">
+
+        <CollectionView Grid.Row="0" ItemsSource="{Binding CartItems}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeThickness="0" BackgroundColor="White" Padding="15" Margin="0,0,0,8">
+                        <Grid ColumnDefinitions="Auto, Auto, *" RowDefinitions="Auto, Auto">
+                            <Label Grid.RowSpan="2" Grid.Column="0" Text="&#xf0132;" FontFamily="MDI" FontSize="24" TextColor="#EE4D2D" VerticalOptions="Center" Margin="0,0,10,0" />
+
+                            <Image Grid.RowSpan="2" Grid.Column="1" Source="{Binding CoverImageUrl, TargetNullValue='https://down-vn.img.susercontent.com/file/a2d5109ed55d6c144e79a216fa03981d'}" WidthRequest="80" HeightRequest="100" Aspect="AspectFill" Margin="0,0,10,0"/>
+
+                            <Label Grid.Row="0" Grid.Column="2" Text="{Binding Title}" FontSize="14" TextColor="#222" MaxLines="2" LineBreakMode="TailTruncation" />
+
+                            <Grid Grid.Row="1" Grid.Column="2" ColumnDefinitions="*, Auto" VerticalOptions="End">
+                                <Label Grid.Column="0" Text="{Binding Price, StringFormat='{0:N0} ₫'}" FontSize="16" TextColor="#EE4D2D" FontAttributes="Bold" VerticalOptions="Center" />
+
+                                <Border Grid.Column="1" Stroke="#E0E0E0" StrokeThickness="1" BackgroundColor="White">
+                                    <HorizontalStackLayout>
+                                        <Button Text="-" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}, Path=DecreaseCommand}" CommandParameter="{Binding .}" WidthRequest="30" HeightRequest="30" Padding="0" BackgroundColor="Transparent" TextColor="Black" />
+                                        <BoxView WidthRequest="1" Color="#E0E0E0" />
+
+                                        <Label Text="{Binding Quantity}" WidthRequest="40" HorizontalTextAlignment="Center" VerticalTextAlignment="Center" TextColor="Black" />
+                                        <BoxView WidthRequest="1" Color="#E0E0E0" />
+
+                                        <Button Text="+" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}, Path=IncreaseCommand}" CommandParameter="{Binding .}" WidthRequest="30" HeightRequest="30" Padding="0" BackgroundColor="Transparent" TextColor="Black" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="End" Margin="0,0,15,0">
+            <HorizontalStackLayout Spacing="5">
+                <Label Text="Tổng thanh toán:" FontSize="12" TextColor="#222" VerticalOptions="End" />
+                <Label Text="{Binding TotalPrice, StringFormat='{0:N0} ₫'}" FontSize="16" TextColor="#EE4D2D" FontAttributes="Bold" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>
