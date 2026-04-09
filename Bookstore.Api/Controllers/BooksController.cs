@@ -1,6 +1,8 @@
-﻿using Bookstore.Api.Services;
+﻿using AutoMapper;
 using Bookstore.Shared.Dtos;
-using Microsoft.AspNetCore.Http;
+using Bookstore.Shared.Interfaces;
+using Bookstore.Shared.Models;
+using Bookstore.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bookstore.Api.Controllers
@@ -9,18 +11,43 @@ namespace Bookstore.Api.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly BookService _bookservice;
-
-        public BooksController(BookService bookservice)
+        private readonly IBookService _bookService;
+        public BooksController(IBookService bookService)
         {
-            _bookservice = bookservice;
+            _bookService = bookService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<BookDto>>> Get()
+        public async Task<IActionResult> GetBooks()
         {
-            var books = await _bookservice.GetAllBooksAsync();
+            var result = await _bookService.GetAllBooksAsync();
+            if (!result.Any()) return NotFound(new { Message = "Chưa có cuốn sách nào." });
+            return Ok(result);
+        }
+
+        [HttpGet("category")]
+        public async Task<IActionResult> GetBooksByCID([FromQuery] int id)
+        {
+            var books = await _bookService.GetBooksByCategoryIdAsync(id);
             return Ok(books);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchBooks([FromQuery] BookFilterRequestDto filter)
+        {
+            var result = await _bookService.SearchBooksAsync(filter);
+            if (!result.Any()) return NotFound(new { Message = "Không tìm thấy sách phù hợp." });
+            return Ok(result);
+        }
+
+        [HttpGet("batch")]
+        public async Task<IActionResult> GetBooksByIds([FromQuery] string ids)
+        {
+            if (string.IsNullOrEmpty(ids)) return Ok(new List<Book>());
+            var idList = ids.Split(',').Select(int.Parse).ToList();
+
+            var result = await _bookService.GetBooksByIdsAsync(idList);
+            return Ok(result);
         }
     }
 }

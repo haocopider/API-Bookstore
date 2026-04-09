@@ -1,18 +1,25 @@
-﻿using System;
+﻿using Bookstore.Shared.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Bookstore.Shared.Dtos
 {
-    public class BookDto
+    public class BookFilterRequestDto
+    {
+        public string? SearchText { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+        public string? Tag { get; set; }
+    }
+
+    public class BookResponseDto
     {
         public int Id { get; set; }
         public string Title { get; set; } = null!;
-        public string? AuthorName { get; set; }
         public string? Description { get; set; }
-        public decimal MinPrice { get; set; } 
-        public string? CoverImageUrl { get; set; }
-
-        public List<string> Categories { get; set; } = new List<string>();
+        public string? ImageUrl { get; set; }
+        public string? AuthorName { get; set; }
+        public decimal StartingPrice { get; set; }
     }
 }
