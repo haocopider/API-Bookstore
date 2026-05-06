@@ -7,7 +7,7 @@ public partial class BookFormat
 {
     public int Id { get; set; }
 
-    public int? BookId { get; set; }
+    public int BookId { get; set; }
 
     public int FormatType { get; set; }
 
@@ -21,5 +21,5 @@ public partial class BookFormat
 
     public double? Rating { get; set; }
 
-    public virtual Book? Book { get; set; }
+    public virtual Book Book { get; set; } = null!;
 }

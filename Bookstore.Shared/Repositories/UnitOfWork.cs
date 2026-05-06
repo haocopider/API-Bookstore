@@ -12,18 +12,24 @@ namespace Bookstore.Shared.Repositories
         public IRepository<Book> Books { get; private set; }
         public IRepository<BookFormat> BookFormats { get; private set; }
         public IRepository<Order> Orders { get; private set; }
+        public IRepository<OrderItem> OrderDetails { get; private set; }
         public IRepository<Author> Authors { get; private set; }
         public IRepository<Category> Categories { get; private set; }
         public IRepository<User> Users { get; private set; }
+        public IRepository<Promotion> Promotions { get; private set; }
+        public IRepository<Review> Reviews { get; private set; }
 
         public UnitOfWork(AppDbContext context)
         {
             _context = context;
             Books = new Repository<Book>(_context);
+            Reviews = new Repository<Review>(_context);
             BookFormats = new Repository<BookFormat>(_context);
             Orders = new Repository<Order>(_context);
+            OrderDetails = new Repository<OrderItem>(_context);
             Authors = new Repository<Author>(_context);
             Categories = new Repository<Category>(_context);
+            Promotions = new Repository<Promotion>(_context);
             Users = new Repository<User>(_context);
         }
 

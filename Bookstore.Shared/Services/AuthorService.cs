@@ -18,19 +18,23 @@ namespace Bookstore.Shared.Services
 
         public async Task<IEnumerable<AuthorDto>> GetAllAuthorsAsync()
         {
-            var authors = await _unitOfWork.Authors.GetAllAsync();
+            var authors = await _unitOfWork.Authors.GetAllAsync(a=> a.Books);
             return _mapper.Map<IEnumerable<AuthorDto>>(authors);
         }
 
         public async Task<AuthorDto?> GetAuthorByIdAsync(int id)
         {
-            var author = await _unitOfWork.Authors.GetFirstOrDefaultAsync(a => a.Id == id);
+            var author = await _unitOfWork.Authors.GetFirstOrDefaultAsync(
+                a => a.Id == id,
+                a => a.Books
+            );
+
             return _mapper.Map<AuthorDto?>(author);
         }
 
         public async Task<IEnumerable<AuthorDto>> SearchAuthorsAsync(string name)
         {
-            var authors = await _unitOfWork.Authors.FindAsync(a => a.Name.Contains(name));
+            var authors = await _unitOfWork.Authors.FindAsync(a => a.Name.Contains(name), a => a.Books);
             return _mapper.Map<IEnumerable<AuthorDto>>(authors);
         }
     }

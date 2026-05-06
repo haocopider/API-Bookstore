@@ -19,8 +19,6 @@ public partial class OrderItem
 
     public string SnapshotBookTitle { get; set; } = null!;
 
-    public string SnapshotFormatName { get; set; } = null!;
-
     public decimal SnapshotUnitPrice { get; set; }
 
     public virtual Book Item { get; set; } = null!;

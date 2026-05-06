@@ -25,10 +25,40 @@ namespace Bookstore.Api.Controllers
             return Ok(result);
         }
 
-        [HttpGet("category")]
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBookById(int id)
+        {
+            var result = await _bookService.GetBookByIdAsync(id);
+            if (result == null) return NotFound(new { Message = "Không tìm thấy sách." });
+            return Ok(result);
+        }
+
+        [HttpPost("review")]
+        public async Task<IActionResult> ReviewBook([FromBody] ReviewBookDto reviewRequest)
+        {
+            var success = await _bookService.ReviewBookAsync(reviewRequest);
+            if (!success) return BadRequest(new { Message = "Đánh giá thất bại. Vui lòng thử lại." });
+            return Ok(new { Message = "Đánh giá thành công." });
+        }
+
+        [HttpGet("categories")]
         public async Task<IActionResult> GetBooksByCID([FromQuery] int id)
         {
             var books = await _bookService.GetBooksByCategoryIdAsync(id);
+            return Ok(books);
+        }
+
+        [HttpGet("promotions")]
+        public async Task<IActionResult> GetBooksByPromotionId([FromQuery] int id)
+        {
+            var books = await _bookService.GetBooksByPromotionIdAsync(id);
+            return Ok(books);
+        }
+
+        [HttpGet("authors")]
+        public async Task<IActionResult> GetBooksByAuthorId([FromQuery] int id)
+        {
+            var books = await _bookService.GetBooksByAuthorIdAsync(id);
             return Ok(books);
         }
 

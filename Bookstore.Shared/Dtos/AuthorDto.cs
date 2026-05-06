@@ -9,8 +9,8 @@ namespace Bookstore.Shared.Dtos
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string? Biography { get; set; }
-        public string? ImageUrl { get; set; } = null;
-        public ICollection<BookResponseDto> Books { get; set; } = new List<BookResponseDto>();
+        public string? Bio { get; set; }
+        public string? AvatarUrl { get; set; } = null;
+        public List<BookDto> Books { get; set; } = new List<BookDto>();
     }
 }

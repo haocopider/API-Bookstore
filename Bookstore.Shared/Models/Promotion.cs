@@ -17,7 +17,9 @@ public partial class Promotion
 
     public DateTime EndDate { get; set; }
 
-    public bool? IsActive { get; set; }
+    public bool IsActive { get; set; }
+
+    public string? Banner { get; set; }
 
     public virtual ICollection<Book> Books { get; set; } = new List<Book>();
 

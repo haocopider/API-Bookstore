@@ -159,6 +159,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasOne(d => d.Book).WithMany(p => p.BookFormats)
                 .HasForeignKey(d => d.BookId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__BookForma__BookI__45F365D3");
         });
 
@@ -209,12 +210,16 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Orders__3214EC07713B9556");
 
+            entity.HasIndex(e => e.OrderCode, "UQ_OrderCode").IsUnique();
+
             entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OrderCode)
+                .HasMaxLength(20)
+                .IsUnicode(false);
             entity.Property(e => e.OrderDate)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(getdate())", "DF__Orders__OrderDat__66603565")
                 .HasColumnType("datetime");
-            entity.Property(e => e.PaymentMethod).HasMaxLength(50);
-            entity.Property(e => e.PointsUsed).HasDefaultValue(0);
+            entity.Property(e => e.PointIsUsed).HasDefaultValue(0, "DF__Orders__PointsUs__6754599E");
             entity.Property(e => e.ShippingAddress).HasMaxLength(500);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TrackingNumber).HasMaxLength(100);
@@ -231,7 +236,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.ItemType).HasMaxLength(20);
             entity.Property(e => e.PriceAtPurchase).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.SnapshotBookTitle).HasMaxLength(250);
-            entity.Property(e => e.SnapshotFormatName).HasMaxLength(50);
             entity.Property(e => e.SnapshotUnitPrice).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.Item).WithMany(p => p.OrderItems)
@@ -261,7 +265,7 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.EndDate).HasColumnType("datetime");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF__Promotion__IsAct__5AEE82B9");
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.StartDate).HasColumnType("datetime");
 
@@ -356,15 +360,11 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF__Users__CreatedAt__14270015");
-            entity.Property(e => e.CurrentPoints).HasDefaultValue(0, "DF__Users__CurrentPo__534D60F1");
             entity.Property(e => e.Email).HasMaxLength(255);
             entity.Property(e => e.FullName).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Users_IsActive");
+            entity.Property(e => e.PhoneNumber).HasMaxLength(11);
             entity.Property(e => e.Rank).HasDefaultValue(0, "DF_Users_Rank");
-            entity.Property(e => e.TotalPoint).HasDefaultValue(0, "DF_Users_TotalPoint");
-            entity.Property(e => e.TotalSpent)
-                .HasDefaultValue(0m, "DF__Users__TotalSpen__52593CB8")
-                .HasColumnType("decimal(18, 2)");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -15,17 +15,19 @@ public partial class Order
 
     public decimal FinalAmount { get; set; }
 
-    public int? PointsUsed { get; set; }
+    public int? PointIsUsed { get; set; }
 
     public int Status { get; set; }
 
     public string? ShippingAddress { get; set; }
 
-    public string? PaymentMethod { get; set; }
+    public int PaymentMethod { get; set; }
 
     public int PaymentStatus { get; set; }
 
     public string? TrackingNumber { get; set; }
+
+    public string OrderCode { get; set; } = null!;
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 

@@ -7,5 +7,8 @@ namespace Bookstore.Shared.Interfaces
     {
         Task<AuthResponse?> LoginAsync(LoginRequest request);
         Task<bool> RegisterAsync(RegisterRequest request);
+        Task<bool> UpdateProfileAsync(int userId, UpdateProfileDto dto);
+        Task<bool> ChangePasswordAsync(int userId, ChangePasswordDto dto);
+        Task<UserInfoDto?> GetProfileAsync(int userId);
     }
 }

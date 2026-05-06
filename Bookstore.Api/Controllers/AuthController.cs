@@ -1,7 +1,8 @@
 ﻿using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Bookstore.Api.Controllers
 {
@@ -14,6 +15,87 @@ namespace Bookstore.Api.Controllers
         public AuthController(IAuthService authService)
         {
             _authService = authService;
+        }
+
+        [HttpGet("me/profile")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(new { message = "Token hợp lệ nhưng không chứa thông tin ID (NameIdentifier)." });
+                }
+
+                if (!int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = $"Lỗi: ID trong Token không phải là số nguyên. Nó đang là: '{userIdClaim.Value}'" });
+                }
+
+                var profile = await _authService.GetProfileAsync(userId);
+
+                if (profile == null)
+                {
+                    return NotFound(new { message = "Không tìm thấy người dùng này trong Database." });
+                }
+
+                return Ok(profile);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi máy chủ", error = ex.Message });
+            }
+        }
+
+        [HttpPut("me/profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token không hợp lệ hoặc đã hết hạn." });
+            }
+
+            var success = await _authService.UpdateProfileAsync(userId, dto);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Không thể cập nhật thông tin lúc này." });
+            }
+
+            return Ok(new { message = "Cập nhật thông tin thành công!" });
+        }
+
+        [HttpPut("me/change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token không hợp lệ hoặc đã hết hạn." });
+            }
+
+            var success = await _authService.ChangePasswordAsync(userId, dto);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Mật khẩu cũ không chính xác." });
+            }
+
+            return Ok(new { message = "Đổi mật khẩu thành công!" });
         }
 
         [HttpPost("register")]

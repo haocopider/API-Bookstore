@@ -1,15 +1,12 @@
 ﻿using Bookstore.Shared.Dtos;
-using Bookstore.Shared.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Bookstore.Shared.Interfaces
 {
     public interface IOrderService
     {
-        Task<CheckoutResponseDto> CheckoutAsync(CheckoutRequestDto request);
-
-        Task<IEnumerable<OrderHistoryDto>> GetMyOrdersAsync(int userId);
+        Task<OrderDto> CreateOrderAsync(int userId, CreateOrderDto request);
+        Task<IEnumerable<OrderDto>> GetOrderHistoryAsync(int userId, int? status = null);
+        Task<OrderDto> GetOrderDetailAsync(int userId, int orderId);
+        Task<bool> CancelOrderAsync(int userId, int orderId, string cancelReason);
+        Task<bool> CompleteOrderAsync(int userId, int orderId);
     }
 }

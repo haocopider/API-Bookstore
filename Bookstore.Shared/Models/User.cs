@@ -15,17 +15,17 @@ public partial class User
 
     public string? Address { get; set; }
 
-    public decimal? TotalSpent { get; set; }
-
-    public int? CurrentPoints { get; set; }
+    public int CurrentPoints { get; set; }
 
     public int? Rank { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
-    public int? TotalPoint { get; set; }
+    public int TotalPoints { get; set; }
+
+    public string? PhoneNumber { get; set; }
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 

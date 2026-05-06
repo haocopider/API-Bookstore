@@ -54,7 +54,7 @@ namespace Bookstore.Shared.Repositories
                     query = query.Include(include);
                 }
             }
-            return await query.Where(predicate).ToListAsync();
+            return await query.ToListAsync();
         }
 
         public async Task AddAsync(T entity)

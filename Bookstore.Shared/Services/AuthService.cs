@@ -64,6 +64,55 @@ namespace Bookstore.Shared.Services
             };
         }
 
+        public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDto dto)
+        {
+            var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return false;
+            }
+            bool isOldPasswordValid = PasswordHelper.Verify(dto.OldPassword, user.PasswordHash);
+
+            if (!isOldPasswordValid)
+            {
+                return false;
+            }
+            
+            user.PasswordHash = PasswordHelper.Hash(dto.NewPassword);
+
+            _unitOfWork.Users.Update(user);
+            var result = await _unitOfWork.CommitAsync();
+
+            return result > 0;
+        }
+        public async Task<UserInfoDto?> GetProfileAsync(int userId)
+        {
+            var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null) return null;
+
+            return _mapper.Map<UserInfoDto>(user);
+        }
+
+        public async Task<bool> UpdateProfileAsync(int userId, UpdateProfileDto dto)
+        {
+            var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return false;
+            }
+
+            user.FullName = dto.FullName;
+            user.PhoneNumber = dto.PhoneNumber;
+            user.Address = dto.Address;
+
+            _unitOfWork.Users.Update(user);
+            var result = await _unitOfWork.CommitAsync();
+            return result > 0;
+        }
+
         private string CreateToken(User user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
@@ -86,5 +135,6 @@ namespace Bookstore.Shared.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
     }
 }
