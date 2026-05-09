@@ -21,6 +21,8 @@ public partial class OrderItem
 
     public decimal SnapshotUnitPrice { get; set; }
 
+    public string? SnapshotBookImg { get; set; }
+
     public virtual Book Item { get; set; } = null!;
 
     public virtual Order? Order { get; set; }

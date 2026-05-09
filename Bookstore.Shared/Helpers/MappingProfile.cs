@@ -20,6 +20,7 @@ namespace Bookstore.Shared.Helpers
             CreateMap<OrderItem, OrderItemDto>()
                             .ForMember(dest => dest.BookId, opt => opt.MapFrom(src => src.ItemId))
                             .ForMember(dest => dest.BookTitle, opt => opt.MapFrom(src => src.SnapshotBookTitle))
+                            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.SnapshotBookImg))
                             .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.PriceAtPurchase))
                             .ForMember(dest => dest.OriginalPrice, opt => opt.MapFrom(src => src.SnapshotUnitPrice));
 
