@@ -135,11 +135,11 @@ public partial class AppDbContext : DbContext
                     l => l.HasOne<Book>().WithMany()
                         .HasForeignKey("BookId")
                         .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK__Book_Cate__BookI__412EB0B6"),
+                        .HasConstraintName("FK_Book_Categories_Books"),
                     j =>
                     {
                         j.HasKey("BookId", "CategoryId").HasName("PK__Book_Cat__9C7051A7FA64003F");
-                        j.ToTable("Book_Category");
+                        j.ToTable("Book_Categories");
                     });
         });
 
@@ -338,6 +338,8 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<RolePermission>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__RolePerm__3214EC07E8986A14");
+
+            entity.ToTable("Role_Permissions");
 
             entity.HasIndex(e => new { e.RoleId, e.PermissionId }, "UQ_Role_Permission").IsUnique();
 

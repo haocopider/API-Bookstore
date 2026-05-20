@@ -33,14 +33,6 @@ namespace Bookstore.Api.Controllers
             return Ok(result);
         }
 
-        [HttpPost("review")]
-        public async Task<IActionResult> ReviewBook([FromBody] ReviewBookDto reviewRequest)
-        {
-            var success = await _bookService.ReviewBookAsync(reviewRequest);
-            if (!success) return BadRequest(new { Message = "Đánh giá thất bại. Vui lòng thử lại." });
-            return Ok(new { Message = "Đánh giá thành công." });
-        }
-
         [HttpGet("categories")]
         public async Task<IActionResult> GetBooksByCID([FromQuery] int id)
         {
@@ -78,6 +70,77 @@ namespace Bookstore.Api.Controllers
 
             var result = await _bookService.GetBooksByIdsAsync(idList);
             return Ok(result);
+        }
+
+        [HttpPost("review")]
+        public async Task<IActionResult> ReviewBook([FromBody] ReviewBookDto reviewRequest)
+        {
+            var success = await _bookService.ReviewBookAsync(reviewRequest);
+            if (!success) return BadRequest(new { Message = "Đánh giá thất bại. Vui lòng thử lại." });
+            return Ok(new { Message = "Đánh giá thành công." });
+        }
+
+        [HttpPost("admin/create")]
+        // [HasPermission("CREATE_BOOK")]
+        public async Task<IActionResult> CreateBook([FromBody] CreateBookDto request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var success = await _bookService.CreateBookAsync(request);
+                if (success)
+                {
+                    return Ok(new { Message = "Tạo sách thành công!" });
+                }
+                return BadRequest(new { Message = "Có lỗi xảy ra khi lưu sách." });
+            }
+            catch (Exception ex)
+            {
+                // Có thể log lỗi ở đây
+                return StatusCode(500, new { Message = "Lỗi hệ thống: " + ex.Message });
+            }
+        }
+
+        [HttpPut("admin/update/{id}")]
+        // [HasPermission("UPDATE_BOOK")]
+        public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var success = await _bookService.UpdateBookAsync(id, request);
+                if (success) return Ok(new { Message = "Cập nhật sách thành công!" });
+
+                return NotFound(new { Message = "Không tìm thấy sách hoặc sách đã bị xóa." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Lỗi hệ thống: " + ex.Message });
+            }
+        }
+
+        [HttpPost("admin/restock")]
+        // [HasPermission("UPDATE_STOCK")]
+        public async Task<IActionResult> Restock([FromBody] RestockDto request)
+        {
+            if (request.AddedQuantity <= 0)
+                return BadRequest(new { Message = "Số lượng nhập kho phải lớn hơn 0." });
+
+            try
+            {
+                var success = await _bookService.RestockAsync(request);
+                if (success) return Ok(new { Message = "Nhập kho thành công!" });
+
+                return NotFound(new { Message = "Không tìm thấy định dạng sách này." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Lỗi hệ thống: " + ex.Message });
+            }
         }
     }
 }

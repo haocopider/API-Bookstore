@@ -9,8 +9,6 @@ public partial class BookFormat
 
     public int BookId { get; set; }
 
-    public int FormatType { get; set; }
-
     public decimal Price { get; set; }
 
     public int? Stock { get; set; }
@@ -20,6 +18,8 @@ public partial class BookFormat
     public string? DigitalLink { get; set; }
 
     public double? Rating { get; set; }
+
+    public int Type { get; set; }
 
     public virtual Book Book { get; set; } = null!;
 }

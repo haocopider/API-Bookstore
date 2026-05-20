@@ -211,5 +211,124 @@ namespace Bookstore.Shared.Services
 
             return bookDto;
         }
+
+        public async Task<bool> CreateBookAsync(CreateBookDto request)
+        {
+            // 1. Kiểm tra và Xử lý Tác giả (Author)
+            var authorList = await _unitOfWork.Authors.FindAsync(a => a.Name.ToLower() == request.AuthorName.ToLower());
+            var author = authorList.FirstOrDefault();
+
+            // Nếu chưa tồn tại, tạo object Author mới. 
+            // EF Core sẽ tự động INSERT Author này khi gọi CommitAsync
+            if (author == null)
+            {
+                author = new Author { Name = request.AuthorName };
+            }
+
+            // 2. Kiểm tra và Xử lý Thể loại (Categories)
+            var categories = new List<Category>();
+            foreach (var catName in request.CategoryNames)
+            {
+                var catList = await _unitOfWork.Categories.FindAsync(c => c.Name.ToLower() == catName.ToLower());
+                var category = catList.FirstOrDefault();
+
+                if (category == null)
+                {
+                    // Tạm thời tạo Slug đơn giản, bạn có thể viết hàm chuyển tiếng Việt có dấu thành không dấu
+                    category = new Category { Name = catName, Slug = catName.Replace(" ", "-").ToLower() };
+                }
+                categories.Add(category);
+            }
+
+            // 3. Khởi tạo đối tượng Book và BookFormats
+            var book = new Book
+            {
+                Title = request.Title,
+                Description = request.Description,
+                Publisher = request.Publisher,
+                CoverImageUrl = request.CoverImageUrl,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false,
+                Author = author, // Gán Author (có thể là cũ hoặc mới)
+                Categories = categories, // Gán list Categories (cũ hoặc mới)
+                BookFormats = request.Formats.Select(f => new BookFormat
+                {
+                    Type = f.Format,
+                    Price = f.Price,
+                    Stock = f.Stock
+                }).ToList()
+            };
+
+            // 4. Lưu vào Database
+            await _unitOfWork.Books.AddAsync(book);
+            await _unitOfWork.CommitAsync();
+
+            return true;
+        }
+
+        //public Task<bool> UpdateBookAsync(UpdateBookDto request)
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        public async Task<bool> UpdateBookAsync(int id, UpdateBookDto request)
+        {
+            // Lấy sách hiện tại cùng với các quan hệ liên quan
+            var books = await _unitOfWork.Books.FindAsync(
+                b => b.Id == id,
+                b => b.Author,
+                b => b.Categories
+            );
+            var book = books.FirstOrDefault();
+
+            if (book == null || book.IsDeleted == true)
+                return false;
+
+            // 1. Cập nhật thông tin cơ bản
+            book.Title = request.Title;
+            book.Description = request.Description;
+            book.Publisher = request.Publisher;
+            book.CoverImageUrl = request.CoverImageUrl;
+
+            // 2. Xử lý Tác giả (Tương tự Create)
+            if (book.Author == null || book.Author.Name.ToLower() != request.AuthorName.ToLower())
+            {
+                var authorList = await _unitOfWork.Authors.FindAsync(a => a.Name.ToLower() == request.AuthorName.ToLower());
+                var author = authorList.FirstOrDefault() ?? new Author { Name = request.AuthorName };
+                book.Author = author;
+            }
+
+            // 3. Xử lý Thể loại (Xóa cái cũ không còn chọn, thêm cái mới)
+            book.Categories.Clear(); // Xóa mapping cũ
+            foreach (var catName in request.CategoryNames)
+            {
+                var catList = await _unitOfWork.Categories.FindAsync(c => c.Name.ToLower() == catName.ToLower());
+                var category = catList.FirstOrDefault() ?? new Category { Name = catName, Slug = catName.Replace(" ", "-").ToLower() };
+                book.Categories.Add(category);
+            }
+
+            _unitOfWork.Books.Update(book);
+            await _unitOfWork.CommitAsync();
+
+            return true;
+        }
+
+        public async Task<bool> RestockAsync(RestockDto request)
+        {
+            // Lấy định dạng sách dựa trên ID
+            var formats = await _unitOfWork.BookFormats.FindAsync(f => f.Id == request.BookFormatId);
+            var bookFormat = formats.FirstOrDefault();
+
+            if (bookFormat == null)
+                return false;
+
+            // Tăng số lượng tồn kho
+            bookFormat.Stock = (bookFormat.Stock ?? 0) + request.AddedQuantity;
+
+            _unitOfWork.BookFormats.Update(bookFormat);
+            await _unitOfWork.CommitAsync();
+
+            return true;
+        }
     }
 }

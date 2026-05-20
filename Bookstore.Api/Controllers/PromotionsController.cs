@@ -51,5 +51,45 @@ namespace Bookstore.Api.Controllers
                 return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
             }
         }
+
+        [HttpPut("admin/update/{id}")]
+        [Authorize] // Chỗ này sau sẽ đổi thành Attribute check Role Admin (VD: [HasPermission("MANAGE_PROMOTIONS")])
+        public async Task<IActionResult> UpdatePromotion(int id, [FromBody] UpdatePromotionRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                var success = await _promotionService.UpdatePromotionAsync(id, request);
+                if (!success) return NotFound(new { message = "Không tìm thấy chương trình khuyến mãi." });
+
+                return Ok(new { message = "Cập nhật khuyến mãi thành công!" });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("admin/delete/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeletePromotion(int id)
+        {
+            try
+            {
+                var success = await _promotionService.DeletePromotionAsync(id);
+                if (!success) return NotFound(new { message = "Không tìm thấy chương trình khuyến mãi." });
+
+                return Ok(new { message = "Đã vô hiệu hóa chương trình khuyến mãi thành công." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+            }
+        }
     }
 }

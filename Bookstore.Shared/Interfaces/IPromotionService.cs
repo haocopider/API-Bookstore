@@ -10,5 +10,7 @@ namespace Bookstore.Shared.Interfaces
         Task<PromotionInfoDTO?> GetBestPromotionForBookAsync(int bookId, decimal originalPrice);
         Task<IEnumerable<PromotionInfoDTO>> GetPromotionInfosAsync();
         Task<bool> CreatePromotionAsync(CreatePromotionRequest request);
+        Task<bool> UpdatePromotionAsync(int id, UpdatePromotionRequest request);
+        Task<bool> DeletePromotionAsync(int id); 
     }
 }
