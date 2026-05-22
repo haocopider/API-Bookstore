@@ -1,135 +1,18 @@
-﻿using Bookstore.Shared.Helpers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookstore.Shared.Models;
 
-public partial class AppDbContext : DbContext
+public partial class AppDbContextSnapshot : DbContext
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor httpContextAccessor)
-            : base(options)
+    public AppDbContextSnapshot()
     {
-        _httpContextAccessor = httpContextAccessor;
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public AppDbContextSnapshot(DbContextOptions<AppDbContextSnapshot> options)
+        : base(options)
     {
-        // 1. Chuẩn bị danh sách lưu log
-        var auditEntries = OnBeforeSaveChanges();
-
-        // 2. Lưu thay đổi thực tế vào DB
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        // 3. Xử lý các entity có khóa chính tự tăng (Id)
-        if (auditEntries.Any(a => a.HasTemporaryProperties))
-        {
-            await OnAfterSaveChangesAsync(auditEntries);
-            await base.SaveChangesAsync(cancellationToken); // Lưu thêm lần nữa cho log có Id mới
-        }
-
-        return result;
-    }
-
-    private List<AuditEntry> OnBeforeSaveChanges()
-    {
-        ChangeTracker.DetectChanges();
-        var auditEntries = new List<AuditEntry>();
-
-        // Lấy Id của người dùng từ Token (Admin)
-        var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        int? adminId = int.TryParse(userIdClaim, out var id) ? id : null;
-
-        foreach (var entry in ChangeTracker.Entries())
-        {
-            // Bỏ qua các thực thể không thay đổi, không theo dõi, hoặc chính là bảng AuditLog
-            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
-                continue;
-
-            var auditEntry = new AuditEntry(entry)
-            {
-                TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
-                AdminId = adminId
-            };
-            auditEntries.Add(auditEntry);
-
-            foreach (var property in entry.Properties)
-            {
-                if (property.IsTemporary)
-                {
-                    // Chờ lưu xong để lấy Id tự tăng (cho hành động Thêm mới)
-                    auditEntry.TemporaryProperties.Add(property);
-                    continue;
-                }
-
-                string propertyName = property.Metadata.Name;
-                if (property.Metadata.IsPrimaryKey())
-                {
-                    auditEntry.KeyValues[propertyName] = property.CurrentValue;
-                }
-
-                switch (entry.State)
-                {
-                    case EntityState.Added:
-                        auditEntry.ActionType = "CREATE";
-                        auditEntry.NewValues[propertyName] = property.CurrentValue;
-                        break;
-
-                    case EntityState.Deleted:
-                        auditEntry.ActionType = "DELETE";
-                        auditEntry.OldValues[propertyName] = property.OriginalValue;
-                        break;
-
-                    case EntityState.Modified:
-                        if (property.IsModified)
-                        {
-                            auditEntry.ActionType = "UPDATE";
-                            auditEntry.OldValues[propertyName] = property.OriginalValue;
-                            auditEntry.NewValues[propertyName] = property.CurrentValue;
-                        }
-                        break;
-                }
-            }
-        }
-
-        // Với các entity không có property tạm (như Update, Delete), ta có thể convert sang AuditLog và Add luôn
-        foreach (var auditEntry in auditEntries.Where(_ => !_.HasTemporaryProperties))
-        {
-            AuditLogs.Add(auditEntry.ToAuditLog());
-        }
-
-        return auditEntries;
-    }
-
-    private Task OnAfterSaveChangesAsync(List<AuditEntry> auditEntries)
-    {
-        if (auditEntries == null || auditEntries.Count == 0)
-            return Task.CompletedTask;
-
-        foreach (var auditEntry in auditEntries)
-        {
-            if (auditEntry.HasTemporaryProperties)
-            {
-                // Sau khi base.SaveChangesAsync chạy, các property tạm (như Id) đã có giá trị thực
-                foreach (var prop in auditEntry.TemporaryProperties)
-                {
-                    if (prop.Metadata.IsPrimaryKey())
-                    {
-                        auditEntry.KeyValues[prop.Metadata.Name] = prop.CurrentValue;
-                    }
-                    else
-                    {
-                        auditEntry.NewValues[prop.Metadata.Name] = prop.CurrentValue;
-                    }
-                }
-                AuditLogs.Add(auditEntry.ToAuditLog());
-            }
-        }
-        return Task.CompletedTask;
     }
 
     public virtual DbSet<Admin> Admins { get; set; }
@@ -163,6 +46,10 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<RolePermission> RolePermissions { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Data Source=DESKTOP-UM7849T\\SQLEXPRESS;Initial Catalog=BookstoreDB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

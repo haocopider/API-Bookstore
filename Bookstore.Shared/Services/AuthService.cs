@@ -116,7 +116,7 @@ namespace Bookstore.Shared.Services
         private string CreateToken(User user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration.GetSection("Jwt:Token").Value!));
+                _configuration.GetSection("Jwt:Key").Value!));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
@@ -136,5 +136,75 @@ namespace Bookstore.Shared.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        public async Task<string> LoginAdminAsync(string username, string password)
+        {
+            // 1. Kiểm tra email & password (giả sử đã validate thành công)
+            var admin = await _unitOfWork.Admins.FindAsync(
+                a => a.UserName == username,
+                a => a.Role // Include Role
+            );
+            var currentAdmin = admin.FirstOrDefault();
+
+            if (currentAdmin == null /* || !VerifyPassword(password, currentAdmin.PasswordHash) */)
+                throw new Exception("Sai thông tin đăng nhập.");
+
+            // 2. Lấy danh sách các Permission của Role này
+            var rolePermissions = await _unitOfWork.RolePermissions.FindAsync(
+                rp => rp.RoleId == currentAdmin.RoleId,
+                rp => rp.Permission // Include bảng Permission để lấy mã quyền
+            );
+
+            // 3. Khởi tạo danh sách Claims cho JWT
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, currentAdmin.Id.ToString()),
+                new Claim(ClaimTypes.Name, currentAdmin.UserName),
+                new Claim(ClaimTypes.Role, currentAdmin.Role.Code)
+            };
+
+            // 4. Thêm từng mã Permission vào Claims
+            foreach (var rp in rolePermissions)
+            {
+                if (rp.Permission != null)
+                {
+                    // Ví dụ mã quyền: "CREATE_BOOK", "MANAGE_PROMOTIONS"
+                    claims.Add(new Claim("Permission", rp.Permission.Code));
+                }
+            }
+
+            // 5. Sinh JWT Token bằng JwtSecurityTokenHandler (Sử dụng config hiện tại của bạn)
+            var token = GenerateJwtToken(claims);
+            return token;
+        }
+
+        private string GenerateJwtToken(IEnumerable<Claim> claims)
+        {
+            // 1. Lấy chuỗi bí mật từ cấu hình (appsettings.json)
+            // Lưu ý: Chuỗi SecretKey phải đủ dài và phức tạp (ít nhất 16 ký tự)
+            var secretKey = _configuration["Jwt:Key"];
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+
+            // 2. Định nghĩa thuật toán mã hóa
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            // 3. Khởi tạo Token Descriptor với các thông số cài đặt
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                // Thời gian sống của Token (Ví dụ: 2 giờ)
+                Expires = DateTime.UtcNow.AddHours(48),
+                // Có thể lấy Issuer và Audience từ appsettings.json nếu cần
+                Issuer = _configuration["JwtSettings:Issuer"],
+                Audience = _configuration["JwtSettings:Audience"],
+                SigningCredentials = creds
+            };
+
+            // 4. Tạo và trả về chuỗi Token
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return tokenHandler.WriteToken(token);
+        }
     }
 }

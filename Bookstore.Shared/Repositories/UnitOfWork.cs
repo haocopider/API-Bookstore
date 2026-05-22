@@ -18,6 +18,12 @@ namespace Bookstore.Shared.Repositories
         public IRepository<User> Users { get; private set; }
         public IRepository<Promotion> Promotions { get; private set; }
         public IRepository<Review> Reviews { get; private set; }
+        public IRepository<Role> Roles { get; private set; }
+        public IRepository<Permission> Permissions { get; private set; }
+        public IRepository<RolePermission> RolePermissions { get; private set; }
+        public IRepository<Admin> Admins { get; private set; }
+        public IRepository<Message> Messages { get; private set; }
+        public IRepository<Conversation> Conversations { get; private set; }
 
         public UnitOfWork(AppDbContext context)
         {
@@ -31,6 +37,12 @@ namespace Bookstore.Shared.Repositories
             Categories = new Repository<Category>(_context);
             Promotions = new Repository<Promotion>(_context);
             Users = new Repository<User>(_context);
+            Roles = new Repository<Role>(_context);
+            Permissions = new Repository<Permission>(_context);
+            RolePermissions = new Repository<RolePermission>(_context);
+            Admins = new Repository<Admin>(_context);
+            Messages = new Repository<Message>(_context);
+            Conversations = new Repository<Conversation>(_context);
         }
 
         public void Dispose()

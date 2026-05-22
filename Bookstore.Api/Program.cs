@@ -40,7 +40,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-
+builder.Services.AddScoped<IAdminService, AdminService>();
 //builder.Services.AddHostedService<OrderStatusUpdaterService>();
 
 builder.Services.AddAutoMapper(config => config.AddProfile<MappingProfile>());
@@ -56,6 +56,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<Bookstore.Api.Hubs.ChatHub>("/chathub");
 app.MapControllers();
 
 app.Run();

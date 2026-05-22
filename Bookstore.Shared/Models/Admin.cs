@@ -33,6 +33,8 @@ public partial class Admin
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string UserName { get; set; } = null!;
+
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
