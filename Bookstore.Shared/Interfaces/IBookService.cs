@@ -15,7 +15,8 @@ namespace Bookstore.Shared.Interfaces
         Task<IEnumerable<BookDto>> GetBooksByPromotionIdAsync(int promotionId);
         Task<IEnumerable<BookDto>> GetBooksByAuthorIdAsync(int authorId);
         Task<bool> ReviewBookAsync(ReviewBookDto reviewRequest);
-
+        //Admin operations
+        Task<IEnumerable<BookAdminDto>> GetAllBooksForAdminAsync(BookFilterRequestDto filter);
         Task<bool> CreateBookAsync(CreateBookDto request);
         Task<bool> UpdateBookAsync(int id, UpdateBookDto request);
         Task<bool> RestockAsync(RestockDto request);

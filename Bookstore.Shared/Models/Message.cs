@@ -17,5 +17,7 @@ public partial class Message
 
     public DateTime? CreatedAt { get; set; }
 
+    public bool IsAdmin { get; set; }
+
     public virtual Conversation? Conversation { get; set; }
 }

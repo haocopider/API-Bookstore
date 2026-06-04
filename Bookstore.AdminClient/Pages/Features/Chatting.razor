@@ -1,0 +1,377 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@implements IAsyncDisposable
+
+@inject HttpClient Http
+@inject IJSRuntime JSR
+@inject IAuthService AuthService
+
+<div class="container-fluid chat-app-container py-3">
+    <div class="row h-100 bg-white shadow-sm rounded-4 overflow-hidden border">
+
+        <div class="col-md-4 col-lg-3 p-0 border-end d-flex flex-column h-100 bg-light">
+            <div class="p-3 bg-white border-bottom shadow-sm">
+                <h5 class="mb-3 fw-bold text-primary"><i class="bx bx-support me-2"></i>Hỗ trợ khách hàng</h5>
+
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text bg-light border-end-0"><i class="bx bx-search text-muted"></i></span>
+                    <input type="text" class="form-control bg-light border-start-0 shadow-none"
+                           placeholder="Tìm tên, mã phòng..."
+                           @bind="searchTerm"
+                           @bind:event="oninput">
+                </div>
+                <div class="d-flex gap-2 text-center" style="font-size: 0.85rem;">
+                    <div class="flex-fill py-1 rounded-pill cursor-pointer fw-semibold @(statusFilter == -1 ? "bg-primary text-white shadow-sm" : "bg-light text-muted border")"
+                         @onclick="() => statusFilter = -1">
+                        Tất cả
+                    </div>
+                    <div class="flex-fill py-1 rounded-pill cursor-pointer fw-semibold @(statusFilter == 0 ? "bg-warning text-dark shadow-sm" : "bg-light text-muted border")"
+                         @onclick="() => statusFilter = 0">
+                        Chờ xử lý
+                    </div>
+                </div>
+            </div>
+
+            <div class="conversation-list flex-grow-1 overflow-auto">
+                @if (conversations == null)
+                {
+                    <div class="text-center mt-4"><div class="spinner-border text-primary" role="status"></div></div>
+                }
+                else if (!FilteredConversations.Any())
+                {
+                    <div class="text-center mt-5 text-muted">
+                        <i class="bx bx-message-alt-x" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <p class="mt-2">Không tìm thấy kết quả phù hợp.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var conv in FilteredConversations)
+                    {
+                        bool isActive = activeConversationId == conv.Id;
+                        <div class="p-3 border-bottom cursor-pointer conversation-item @(isActive ? "bg-primary-subtle border-start border-primary border-4" : "bg-white border-start border-white border-4")"
+                             @onclick="() => SelectConversation(conv.Id)">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-md me-3 bg-secondary rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 45px; height: 45px;">
+                                    @(string.IsNullOrWhiteSpace(conv.CustomerName) ? "U" : conv.CustomerName.Substring(0, 1).ToUpper())
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <h6 class="mb-1 text-truncate fw-bold @(isActive ? "text-primary" : "text-dark")">
+                                        @(string.IsNullOrWhiteSpace(conv.CustomerName) ? $"Khách #{conv.CustomerId}" : conv.CustomerName)
+                                    </h6>
+                                    <small class="text-muted d-block text-truncate">Phòng: #@conv.Id</small>
+                                </div>
+                                @if (conv.Status == 0)
+                                {
+                                    <span class="badge bg-warning text-dark rounded-pill shadow-sm" style="font-size: 0.65rem;">MỚI</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="col-md-8 col-lg-9 p-0 d-flex flex-column h-100">
+            @if (activeConversationId == 0)
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted">
+                    <img src="/assets/img/chat-placeholder.svg" alt="Chat" style="width: 150px; opacity: 0.3;" onerror="this.style.display='none'" />
+                    <i class="bx bx-conversation mt-2" style="font-size: 4rem; opacity: 0.2;"></i>
+                    <h5 class="mt-3 fw-semibold">Chọn một cuộc hội thoại bên trái để bắt đầu</h5>
+                    <p class="small text-center w-50">Hệ thống đồng bộ dữ liệu thời gian thực giúp bạn hỗ trợ khách hàng ngay lập tức.</p>
+                </div>
+            }
+            else
+            {
+                var activeConvInfo = conversations?.FirstOrDefault(c => c.Id == activeConversationId);
+
+                <div class="p-3 bg-white border-bottom d-flex align-items-center justify-content-between shadow-sm z-1">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-sm me-2 bg-primary rounded-circle text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                            @(string.IsNullOrWhiteSpace(activeConvInfo?.CustomerName) ? "U" : activeConvInfo.CustomerName.Substring(0, 1).ToUpper())
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">@(activeConvInfo?.CustomerName ?? $"Khách hàng #{activeConvInfo?.CustomerId}")</h5>
+                            <small class="text-success fw-semibold d-flex align-items-center">
+                                <span class="spinner-grow spinner-grow-sm bg-success me-1" style="width: 8px; height: 8px;"></span> Đang kết nối
+                            </small>
+                        </div>
+                    </div>
+
+                    @if (activeConvInfo?.Status == 0)
+                    {
+                        <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="MarkAsResolved">
+                            <i class="bx bx-check-circle me-1"></i> Đánh dấu đã xử lý
+                        </button>
+                    }
+                </div>
+
+                <div class="chat-messages p-4 flex-grow-1 overflow-auto" id="admin-chat-scroll" @ref="chatScrollRef">
+                    @if (isLoadingMessages)
+                    {
+                        <div class="text-center mt-4"><div class="spinner-border text-primary spinner-border-sm" role="status"></div></div>
+                    }
+                    else
+                    {
+                        @foreach (var msg in currentMessages)
+                        {
+                            <div class="d-flex mb-3 @(msg.IsAdmin ? "justify-content-end" : "justify-content-start")">
+                                <div class="msg-bubble @(msg.IsAdmin ? "bg-primary text-white" : "bg-white border text-dark") p-3 rounded-4 shadow-sm" style="max-width: 70%;">
+                                    <span style="font-size: 0.95rem;">@msg.Content</span>
+                                    <div class="text-end mt-1" style="font-size: 0.7rem;">
+                                        <small class="@(msg.IsAdmin ? "text-white-50" : "text-muted")">@msg.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="p-3 bg-white border-top">
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control rounded-pill px-4 bg-light border-0 shadow-none fs-6"
+                               placeholder="Nhập phản hồi cho khách hàng..."
+                               @bind="messageInput"
+                               @bind:event="oninput"
+                               @onkeyup="HandleKeyUp"
+                               disabled="@(!isConnected)" />
+                        <button class="btn btn-primary rounded-circle ms-3 d-flex align-items-center justify-content-center shadow-sm"
+                                style="width: 50px; height: 50px;"
+                                @onclick="Send"
+                                disabled="@(!isConnected || string.IsNullOrWhiteSpace(messageInput))">
+                            <i class="bx bx-send fs-4"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-app-container {
+        height: calc(100vh - 80px);
+    }
+
+    .conversation-item:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .chat-messages {
+        background-color: #f4f6f9;
+        scroll-behavior: smooth;
+    }
+
+        .chat-messages::-webkit-scrollbar, .conversation-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track, .conversation-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb, .conversation-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+    .msg-bubble {
+        word-wrap: break-word;
+        border-bottom-left-radius: 4px !important;
+    }
+
+    .justify-content-end .msg-bubble {
+        border-bottom-left-radius: 1rem !important;
+        border-bottom-right-radius: 4px !important;
+    }
+</style>
+
+@code {
+    private HubConnection? hubConnection;
+    private ElementReference chatScrollRef;
+    private bool isConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    private List<ConversationDto>? conversations;
+    private List<MessageResponse> currentMessages = new();
+
+    private int activeConversationId = 0;
+    private string? messageInput;
+    private bool isLoadingMessages = false;
+
+    // --- BIẾN MỚI CHO TÌM KIẾM & LỌC ---
+    private string searchTerm = string.Empty;
+    private int statusFilter = -1; // -1: Tất cả, 0: Chờ xử lý
+
+    // LOGIC LỌC & SẮP XẾP TRỰC TIẾP
+    private IEnumerable<ConversationDto> FilteredConversations =>
+        (conversations ?? Enumerable.Empty<ConversationDto>()) // Xử lý null ngay từ đầu
+        .Where(c =>
+            (statusFilter == -1 || c.Status == statusFilter) &&
+            (string.IsNullOrWhiteSpace(searchTerm) ||
+             (c.CustomerName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+             c.Id.ToString().Contains(searchTerm) ||
+             c.CustomerId.ToString().Contains(searchTerm))
+        )
+        .OrderBy(c => c.Status)
+        .ThenByDescending(c => c.Id);
+    private class ConversationDto
+    {
+        public int Id { get; set; }
+        public int CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+        public int Status { get; set; }
+    }
+
+    private class MessageResponse
+    {
+        public int Id { get; set; }
+        public int ConversationId { get; set; }
+        public int SenderId { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public bool IsAdmin { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActiveConversations();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7259/chathub", options =>
+            {
+                options.AccessTokenProvider = async () => await AuthService.GetAccessTokenAsync();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<object>("ReceiveMessage", (payload) =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(payload);
+                var msg = JsonSerializer.Deserialize<MessageResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (msg != null)
+                {
+                    // Nếu tin nhắn thuộc phòng đang mở -> Hiển thị lên màn hình chat
+                    if (msg.ConversationId == activeConversationId)
+                    {
+                        currentMessages.Add(msg);
+                        InvokeAsync(async () =>
+                        {
+                            StateHasChanged();
+                            await Task.Delay(50);
+                            await ScrollToBottom();
+                        });
+                    }
+
+                    // Logic cập nhật trạng thái phòng thành "Chờ xử lý" (0) nếu có tin nhắn mới từ khách
+                    if (!msg.IsAdmin)
+                    {
+                        var convToUpdate = conversations?.FirstOrDefault(c => c.Id == msg.ConversationId);
+                        if (convToUpdate != null)
+                        {
+                            convToUpdate.Status = 0; // Kéo phòng chat lên đầu danh sách
+                            InvokeAsync(StateHasChanged);
+                        }
+                    }
+                }
+            }
+            catch { }
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task LoadActiveConversations()
+    {
+        try
+        {
+            conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("api/chat/admin/active-conversations");
+        }
+        catch { }
+    }
+
+    private async Task SelectConversation(int convId)
+    {
+        if (activeConversationId == convId) return;
+
+        if (activeConversationId > 0 && isConnected)
+            await hubConnection.SendAsync("LeaveConversation", activeConversationId);
+
+        activeConversationId = convId;
+        currentMessages.Clear();
+        isLoadingMessages = true;
+
+        if (isConnected)
+            await hubConnection.SendAsync("JoinConversation", activeConversationId);
+
+        try
+        {
+            var history = await Http.GetFromJsonAsync<List<MessageResponse>>($"api/chat/{activeConversationId}/messages");
+            if (history != null) currentMessages = history;
+        }
+        catch { }
+
+        isLoadingMessages = false;
+
+        _ = InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await Task.Delay(100);
+            await ScrollToBottom();
+        });
+    }
+
+    private async Task Send()
+    {
+        if (!isConnected || string.IsNullOrWhiteSpace(messageInput) || activeConversationId == 0) return;
+
+        await hubConnection.SendAsync("SendMessage", activeConversationId, messageInput.Trim(), "Text");
+        messageInput = string.Empty;
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Send();
+    }
+
+    // Nút chức năng Đánh dấu đã xử lý
+    private async Task MarkAsResolved()
+    {
+        try
+        {
+            // Gọi API Update Status của bạn tại đây
+            // await Http.PutAsync($"api/chat/conversations/{activeConversationId}/resolve", null);
+
+            // Cập nhật RAM để đổi UI tức thì
+            var activeConv = conversations?.FirstOrDefault(c => c.Id == activeConversationId);
+            if (activeConv != null)
+            {
+                activeConv.Status = 1; // 1: Đã xử lý
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try { await JSR.InvokeVoidAsync("blazorHelpers.scrollToBottom", chatScrollRef); } catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            if (activeConversationId > 0 && isConnected)
+                await hubConnection.SendAsync("LeaveConversation", activeConversationId);
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

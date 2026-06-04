@@ -12,13 +12,12 @@ namespace Bookstore.Shared.Interfaces
         Task<AdminDto?> GetAdminByIdAsync(int id);
         Task<bool> CreateAdminAsync(CreateAdminRequest request);
         Task<bool> UpdateAdminAsync(int id, UpdateAdminRequest request);
+        Task<AdminResponseDto> LoginAdminAsync(LoginAdminRequest request);
 
         // Quản lý Vai trò (Role) & Cấp quyền
-        Task<IEnumerable<RoleDto>> GetRolesAsync();
+        Task<IEnumerable<RoleWithPermissionsDto>> GetRolesAsync();
         Task<bool> CreateRoleAsync(CreateRoleRequest request);
-        Task<bool> UpdateRolePermissionsAsync(int roleId, List<int> permissionIds);
-
-        // Lấy danh sách tất cả các Quyền hiện có trong hệ thống
+        Task<bool> UpdateRolePermissionsAsync(int id, List<int> permissionIds);
         Task<IEnumerable<PermissionDto>> GetAllPermissionsAsync();
     }
 }

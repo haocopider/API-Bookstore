@@ -1,0 +1,488 @@
+﻿
+<div class="card mb-4 shadow-sm border-0">
+    <div class="card-header bg-white pt-3 pb-2 border-bottom">
+        <ul class="nav nav-pills" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "roles" ? "active" : "")"
+                        @onclick='() => activeTab = "roles"'>
+                    <i class="bx bx-shield-quarter me-1"></i> Phân quyền Vai trò
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "perms" ? "active" : "")"
+                        @onclick='() => activeTab = "perms"'>
+                    <i class="bx bx-list-check me-1"></i> Định nghĩa Quyền
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-body bg-light">
+        <div class="tab-content p-0">
+
+            @*TAB 1: PHÂN QUYỀN VAI TRÒ*@
+            <div class="tab-pane fade @(activeTab == "roles" ? "show active" : "")">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                        <h5 class="mb-0 fw-bold text-primary">Cấp quyền cho Vai trò</h5>
+                        <button class="btn btn-primary shadow-sm" @onclick="SaveRolePermissions" disabled="@(SelectedRole == null || IsSaving)">
+                            @if (IsSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bx bx-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @* --- DANH SÁCH ROLE (BÊN TRÁI) --- *@
+                            <div class="col-md-3 border-end">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-uppercase text-muted small fw-bold m-0">Danh sách Vai trò</h6>
+                                    <button class="btn btn-sm btn-outline-success" @onclick="OpenAddRoleModal" title="Thêm vai trò mới">
+                                        <i class="bx bx-plus"></i>
+                                    </button>
+                                </div>
+
+                                <div class="list-group list-group-flush">
+                                    @foreach (var role in Roles)
+                                    {
+                                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @(SelectedRole?.Id == role.Id ? "active shadow-sm" : "")"
+                                             style="cursor: pointer; border-radius: 8px; margin-bottom: 4px;" @onclick="() => SelectRole(role)">
+                                            <div>
+                                                <div class="fw-bold">@role.Name</div>
+                                                <small class="opacity-75" style="font-size: 0.75rem">@role.Code</small>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-white text-primary rounded-pill me-1 border">@role.AssignedPermissionIds.Count</span>
+                                                @if (role.Code != "ADMIN" && role.Code != "CUSTOMER" && role.Code != "STORE_OWNER")
+                                                {
+                                                    <button class="btn btn-sm btn-link text-danger p-0 z-3"
+                                                            @onclick:stopPropagation="true"
+                                                            @onclick="() => DeleteRole(role)">
+                                                        <i class="bx bx-trash"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @* --- DANH SÁCH PERMISSION (BÊN PHẢI) --- *@
+                            <div class="col-md-9 ps-md-4">
+                                @if (SelectedRole == null)
+                                {
+                                    <div class="text-center py-5 text-muted h-100 d-flex flex-column justify-content-center align-items-center">
+                                        <i class="bx bx-shield-alt-2 fs-1 mb-2 opacity-50"></i>
+                                        <p>Chọn vai trò bên trái để xem và cấp quyền</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-between mb-3 bg-white p-3 rounded border shadow-sm align-items-center">
+                                        <h6 class="fw-bold mb-0">Đang chỉnh sửa: <span class="text-primary fs-5">@SelectedRole.Name</span></h6>
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input" type="checkbox" id="selectAll" @onchange="ToggleAllPermissions">
+                                            <label class="form-check-label fw-semibold" for="selectAll">Chọn tất cả quyền</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3" style="max-height: 550px; overflow-y: auto; padding-right: 5px;">
+                                        @foreach (var group in GroupedPermissions)
+                                        {
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="card h-100 border shadow-sm">
+                                                    <div class="card-header bg-light py-2 border-bottom">
+                                                        <strong class="text-primary"><i class="bx bx-folder-open me-1"></i>@group.Key</strong>
+                                                    </div>
+                                                    <div class="card-body p-2">
+                                                        @foreach (var perm in group.Value)
+                                                        {
+                                                            <div class="form-check mb-1">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       id="perm_@perm.Id"
+                                                                       checked="@SelectedRole.AssignedPermissionIds.Contains(perm.Id)"
+                                                                       @onchange="@(e => TogglePermission(perm.Id, e.Value))">
+                                                                <label class="form-check-label small text-truncate d-block cursor-pointer"
+                                                                       for="perm_@perm.Id" title="@perm.Description">
+                                                                    @perm.Name
+                                                                </label>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @*TAB 2: QUẢN LÝ ĐỊNH NGHĨA QUYỀN (CRUD PERMISSION)*@
+            <div class="tab-pane fade @(activeTab == "perms" ? "show active" : "")">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                        <h5 class="mb-0 fw-bold text-success">Danh sách Quyền hệ thống</h5>
+                        <button class="btn btn-success shadow-sm" @onclick="OpenAddPermModal">
+                            <i class="bx bx-plus me-1"></i> Thêm quyền mới
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (AllPermissions == null)
+                        {
+                            <div class="p-5 text-center"><div class="spinner-border text-success"></div></div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Mã quyền (Code)</th>
+                                            <th>Tên hiển thị</th>
+                                            <th>Mô tả</th>
+                                            <th class="text-center">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var p in AllPermissions)
+                                        {
+                                            <tr>
+                                                <td class="ps-4"><span class="badge bg-label-info fw-bold">@p.Code</span></td>
+                                                <td class="fw-bold text-dark">@p.Name</td>
+                                                <td class="text-muted small">@p.Description</td>
+                                                <td class="text-center">
+                                                    <button class="btn btn-sm btn-icon btn-outline-primary me-1" @onclick="() => OpenEditPermModal(p)">
+                                                        <i class="bx bx-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-icon btn-outline-danger" @onclick="() => DeletePermission(p)">
+                                                        <i class="bx bx-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL THÊM ROLE --- *@
+@if (showRoleModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold">Thêm Vai trò mới</h5>
+                    <button type="button" class="btn-close" @onclick="() => showRoleModal = false"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Tên vai trò <span class="text-danger">*</span></label>
+                                <input class="form-control" @bind="newRole.Name" placeholder="Ví dụ: Sale Manager" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mã (Code)</label>
+                                <input class="form-control" @bind="newRole.Code" placeholder="SALE_MANAGER (Để trống tự sinh)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mô tả</label>
+                                <input class="form-control" @bind="newRole.Description" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button class="btn btn-secondary" @onclick="() => showRoleModal = false">Hủy</button>
+                    <button class="btn btn-primary" @onclick="CreateRole"><i class="bx bx-save me-1"></i> Lưu lại</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* --- MODAL THÊM/SỬA PERMISSION --- *@
+@if (showPermModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold">@(isEditPerm ? "Chỉnh sửa Quyền" : "Thêm Quyền mới")</h5>
+                    <button type="button" class="btn-close" @onclick="() => showPermModal = false"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <EditForm Model="permModel" OnValidSubmit="SavePermission">
+                        <DataAnnotationsValidator />
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Mã quyền (Code) <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="permModel.Code" disabled="@isEditPerm" placeholder="VD: PRODUCT.EXPORT" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tên hiển thị <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="permModel.Name" placeholder="VD: Xuất Excel sản phẩm" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mô tả</label>
+                                    <InputText class="form-control" @bind-Value="permModel.Description" />
+                                </div>
+                                <div class="text-end mt-3 border-top pt-3">
+                                    <button type="button" class="btn btn-secondary me-2" @onclick="() => showPermModal = false">Hủy</button>
+                                    <button type="submit" class="btn btn-success"><i class="bx bx-save me-1"></i> @(isEditPerm ? "Cập nhật" : "Tạo mới")</button>
+                                </div>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // --- Khối @code giữ nguyên logic của bạn, chỉ là tôi sắp xếp lại cho gọn ---
+    private string activeTab = "roles";
+
+    private List<RoleWithPermissionsDto> Roles = new();
+    private List<PermissionDto> AllPermissions = new();
+    private Dictionary<string, List<PermissionDto>> GroupedPermissions = new();
+
+    private RoleWithPermissionsDto? SelectedRole;
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+
+    private bool showRoleModal = false;
+    private CreateRoleRequest newRole = new();
+
+    private bool showPermModal = false;
+    private bool isEditPerm = false;
+    private PermissionDto permModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            IsLoading = true;
+
+            var rolesTask = Http.GetFromJsonAsync<List<RoleWithPermissionsDto>>("api/admins/roles");
+            var permsTask = Http.GetFromJsonAsync<List<PermissionDto>>("api/admins/permissions");
+            await Task.WhenAll(rolesTask, permsTask);
+
+            Roles = await rolesTask ?? new();
+            AllPermissions = await permsTask ?? new();
+
+            GroupedPermissions = AllPermissions
+                .GroupBy(p => !string.IsNullOrEmpty(p.Code) && p.Code.Contains('.') ? p.Code.Split('.')[0] : "Chung")
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+        catch (Exception ex)
+        {
+            await JSR.InvokeVoidAsync("alert", "Lỗi tải dữ liệu: " + ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void SelectRole(RoleWithPermissionsDto role)
+    {
+        SelectedRole = role;
+    }
+
+    private void TogglePermission(int permId, object? isChecked)
+    {
+        if (SelectedRole == null) return;
+        bool check = (bool)(isChecked ?? false);
+
+        if (check)
+        {
+            if (!SelectedRole.AssignedPermissionIds.Contains(permId))
+                SelectedRole.AssignedPermissionIds.Add(permId);
+        }
+        else
+        {
+            SelectedRole.AssignedPermissionIds.Remove(permId);
+        }
+    }
+
+    private void ToggleGroup(List<PermissionDto> permissions, object? isChecked)
+    {
+        if (SelectedRole == null) return;
+        bool check = (bool)(isChecked ?? false);
+
+        foreach (var p in permissions)
+        {
+            if (check)
+            {
+                if (!SelectedRole.AssignedPermissionIds.Contains(p.Id))
+                    SelectedRole.AssignedPermissionIds.Add(p.Id);
+            }
+            else
+            {
+                SelectedRole.AssignedPermissionIds.Remove(p.Id);
+            }
+        }
+    }
+
+    private bool IsGroupSelected(List<PermissionDto> permissions)
+    {
+        if (SelectedRole == null) return false;
+        return permissions.All(p => SelectedRole.AssignedPermissionIds.Contains(p.Id));
+    }
+
+    private void ToggleAllPermissions(ChangeEventArgs e)
+    {
+        if (SelectedRole == null) return;
+        bool check = (bool)(e.Value ?? false);
+
+        SelectedRole.AssignedPermissionIds.Clear();
+        if (check)
+        {
+            SelectedRole.AssignedPermissionIds.AddRange(AllPermissions.Select(p => p.Id));
+        }
+    }
+
+    private async Task SaveRolePermissions()
+    {
+        if (SelectedRole == null) return;
+        IsSaving = true;
+
+        var response = await Http.PutAsJsonAsync($"api/admins/roles/{SelectedRole.Id}/permissions", SelectedRole.AssignedPermissionIds);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await JSR.InvokeVoidAsync("alert", "Đã cập nhật quyền thành công!");
+        }
+        else
+        {
+            var err = await response.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Có lỗi xảy ra: " + err);
+        }
+        IsSaving = false;
+    }
+
+    private void OpenAddRoleModal()
+    {
+        newRole = new CreateRoleRequest();
+        showRoleModal = true;
+    }
+
+    private async Task CreateRole()
+    {
+        if (string.IsNullOrWhiteSpace(newRole.Name)) return;
+
+        var res = await Http.PostAsJsonAsync("api/admins/roles", newRole);
+
+        if (res.IsSuccessStatusCode)
+        {
+            showRoleModal = false;
+            await LoadData();
+            await JSR.InvokeVoidAsync("alert", "Tạo vai trò thành công");
+        }
+        else
+        {
+            var err = await res.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+        }
+    }
+
+    private async Task DeleteRole(RoleWithPermissionsDto role)
+    {
+        if (!await JSR.InvokeAsync<bool>("confirm", $"Bạn chắc chắn xóa vai trò {role.Name}?")) return;
+
+        var res = await Http.DeleteAsync($"api/admins/roles/{role.Id}");
+
+        if (res.IsSuccessStatusCode)
+        {
+            if (SelectedRole?.Id == role.Id) SelectedRole = null;
+            await LoadData();
+        }
+        else
+        {
+            var err = await res.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Không thể xóa: " + err);
+        }
+    }
+
+    private void OpenAddPermModal()
+    {
+        permModel = new PermissionDto();
+        isEditPerm = false;
+        showPermModal = true;
+    }
+
+    private void OpenEditPermModal(PermissionDto perm)
+    {
+        permModel = new PermissionDto
+        {
+            Id = perm.Id,
+            Code = perm.Code,
+            Name = perm.Name,
+            Description = perm.Description
+        };
+        isEditPerm = true;
+        showPermModal = true;
+    }
+
+    private async Task SavePermission()
+    {
+        HttpResponseMessage res;
+
+        if (isEditPerm)
+        {
+            res = await Http.PutAsJsonAsync($"api/admins/roles/permissions/{permModel.Id}", permModel);
+        }
+        else
+        {
+            res = await Http.PostAsJsonAsync("api/admins/roles/permissions", permModel);
+        }
+
+        if (res.IsSuccessStatusCode)
+        {
+            showPermModal = false;
+            await LoadData();
+        }
+        else
+        {
+            var err = await res.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+        }
+    }
+
+    private async Task DeletePermission(PermissionDto p)
+    {
+        if (!await JSR.InvokeAsync<bool>("confirm", $"Xóa quyền '{p.Code}' sẽ xóa nó khỏi tất cả các vai trò. Tiếp tục?")) return;
+
+        var res = await Http.DeleteAsync($"api/admins/roles/permissions/{p.Id}");
+
+        if (res.IsSuccessStatusCode)
+        {
+            await LoadData();
+        }
+        else
+        {
+            var err = await res.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+        }
+    }
+}

@@ -8,7 +8,6 @@ namespace Bookstore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -131,6 +130,39 @@ namespace Bookstore.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Lỗi hệ thống.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("admin")]
+        // [Authorize] 
+        // [HasPermission("MANAGE_ORDERS")] // Khuyến nghị mở khóa Attribute này sau khi cấu hình Roles
+        public async Task<IActionResult> GetAllOrdersForAdmin([FromQuery] int? status)
+        {
+            var orders = await _orderService.GetAllOrdersForAdminAsync(status);
+            return Ok(orders);
+        }
+
+        [HttpPut("admin/{id}/status")]
+        // [Authorize]
+        // [HasPermission("MANAGE_ORDERS")]
+        public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] int newStatus)
+        {
+            // Trạng thái hợp lệ từ 0 đến 4
+            if (newStatus < 0 || newStatus > 4)
+                return BadRequest(new { message = "Trạng thái không hợp lệ." });
+
+            try
+            {
+                var success = await _orderService.UpdateOrderStatusByAdminAsync(id, newStatus);
+
+                if (!success)
+                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+                return Ok(new { message = "Cập nhật trạng thái đơn hàng thành công." });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
             }
         }
     }

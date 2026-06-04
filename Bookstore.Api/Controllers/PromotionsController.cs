@@ -31,8 +31,22 @@ namespace Bookstore.Api.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetPromotionById(int id)
+        {
+            try
+            {
+                var promotion = await _promotionService.GetPromotionInfoByIdAsync(id);
+                if (promotion == null) return NotFound(new { message = "Không tìm thấy chương trình khuyến mãi." });
+                return Ok(promotion);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+            }
+        }
+
         [HttpPost]
-        [Authorize]
         public async Task<IActionResult> CreatePromotion([FromBody] CreatePromotionRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -52,8 +66,7 @@ namespace Bookstore.Api.Controllers
             }
         }
 
-        [HttpPut("admin/update/{id}")]
-        [Authorize] // Chỗ này sau sẽ đổi thành Attribute check Role Admin (VD: [HasPermission("MANAGE_PROMOTIONS")])
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePromotion(int id, [FromBody] UpdatePromotionRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -75,8 +88,7 @@ namespace Bookstore.Api.Controllers
             }
         }
 
-        [HttpDelete("admin/delete/{id}")]
-        [Authorize]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePromotion(int id)
         {
             try

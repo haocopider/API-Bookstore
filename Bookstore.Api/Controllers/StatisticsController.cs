@@ -7,7 +7,7 @@ namespace Bookstore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [HasPermission("VIEW_REPORTS")]
+    //[HasPermission("VIEW_REPORTS")]
     public class StatisticsController : ControllerBase
     {
         private readonly IStatisticService _statisticService;
@@ -15,6 +15,13 @@ namespace Bookstore.Api.Controllers
         public StatisticsController(IStatisticService statisticService)
         {
             _statisticService = statisticService;
+        }
+
+        [HttpGet("dashboard-summary")]
+        public async Task<IActionResult> GetDashboardSummary()
+        {
+            var result = await _statisticService.GetDashboardSummaryAsync();
+            return Ok(result);
         }
 
         [HttpGet("summary")]

@@ -1,0 +1,143 @@
+﻿@page "/register"
+
+<PageTitle>Đăng Ký Tài Khoản</PageTitle>
+
+<Toast @ref="toastRef" />
+
+
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light py-4">
+    <div class="card shadow-lg border-0 rounded-4 overflow-hidden" style="max-width: 900px; width: 100%;">
+        <div class="row g-0">
+            @* --- FORM BÊN PHẢI --- *@
+            <div class="col-md-7 bg-white p-5">
+                <div class="d-flex align-items-center justify-content-center d-md-none mb-3">
+                    <img src="img/logo.png" class="img-fluid me-2" width="40" />
+                    <h3 class="fw-bold m-0">Đăng Ký</h3>
+                </div>
+                <h3 class="fw-bold mb-4 d-none d-md-block">Đăng ký tài khoản</h3>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-1"></i> @errorMessage
+                    </div>
+                }
+
+                <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+                    <DataAnnotationsValidator />
+                    
+
+                    @* Username *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Tên đăng nhập</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <InputText class="form-control" @bind-Value="registerModel.UserName" placeholder="Chọn tên đăng nhập" />
+                        </div>
+                        <ValidationMessage For="@(() => registerModel.UserName)" class="text-danger small" />
+                    </div>
+
+                    @* Password *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <InputText type="@passType" class="form-control" @bind-Value="registerModel.Password" placeholder="Nhập mật khẩu" />
+                            <button type="button" class="btn btn-light border" @onclick="TogglePass">
+                                <i class="bi @(showPass ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => registerModel.Password)" class="text-danger small" />
+                    </div>
+
+                    @* Confirm Password *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Xác nhận mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
+                            <InputText type="@confirmPassType" class="form-control" @bind-Value="registerModel.ConfirmPassword" placeholder="Nhập lại mật khẩu" />
+                            <button type="button" class="btn btn-light border" @onclick="ToggleConfirmPass">
+                                <i class=" bi @(showConfirmPass ? "bi-eye" : "bi-eye-slash") "></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger small" />
+                    </div>
+
+                    @* Submit *@
+                    <div class="d-grid mt-4 mb-3">
+                        <button type="submit" class="btn btn-primary btn-outline-success py-2 fw-bold" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span> <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>Đăng Ký</span>
+                            }
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <span class="text-muted small">Đã có tài khoản? </span>
+                        <a href="login" class="text-success fw-bold text-decoration-none">Đăng nhập</a>
+                    </div>
+                </EditForm>
+            </div>
+        
+                        @* --- ẢNH BÊN TRÁI --- *@
+            <div style="background-color: #e7e7ff;" class="col-md-5 d-none d-md-flex align-items-center justify-content-center bg-opacity-10 p-5">
+                <div class="text-center">
+                    <img src="../assets/img/logo.png" class="img-fluid mb-3" style="max-height: 200px;" alt="Logo" />
+                    <h4 class="fw-bold text-primary">Chào mừng bạn đến với BidaTrader</h4>
+                    <p class="text-dark">Tham gia cùng với chúng tôi để có những lựa chọn tốt nhất</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Toast toastRef;
+    private RegisterDto registerModel = new();
+    private string? errorMessage;
+    private bool isSubmitting = false;
+
+    private bool showPass = false;
+    private string passType => showPass ? "text" : "password";
+    private void TogglePass() => showPass = !showPass;
+
+    private bool showConfirmPass = false;
+    private string confirmPassType => showConfirmPass ? "text" : "password";
+    private void ToggleConfirmPass() => showConfirmPass = !showConfirmPass;
+
+    private async Task HandleRegister()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.Register(registerModel);
+
+            if (result.IsSuccess)
+            {
+                 await toastRef.Show("Bạn đã đăng kí thành công, hãy đăng nhập để để sử dụng dịch vụ của chúng tôi.", "success");
+                 await Task.Delay(1000);
+                 Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Đăng ký thất bại.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi hệ thống: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    
+}

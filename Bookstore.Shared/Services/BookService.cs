@@ -266,11 +266,6 @@ namespace Bookstore.Shared.Services
             return true;
         }
 
-        //public Task<bool> UpdateBookAsync(UpdateBookDto request)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
         public async Task<bool> UpdateBookAsync(int id, UpdateBookDto request)
         {
             // Lấy sách hiện tại cùng với các quan hệ liên quan
@@ -329,6 +324,35 @@ namespace Bookstore.Shared.Services
             await _unitOfWork.CommitAsync();
 
             return true;
+        }
+
+        public async Task<IEnumerable<BookAdminDto>> GetAllBooksForAdminAsync(BookFilterRequestDto filter)
+        {
+            var booksFromDb = await _unitOfWork.Books.FindAsync(
+                b =>
+                    (string.IsNullOrEmpty(filter.SearchText) ||
+                     b.Title.Contains(filter.SearchText) ||
+                     (b.Author != null && b.Author.Name.Contains(filter.SearchText))) &&
+                    (string.IsNullOrEmpty(filter.Tag) || b.Categories.Any(c => c.Slug == filter.Tag)) &&
+                    (!filter.MinPrice.HasValue || b.BookFormats.Any(f => f.Price >= filter.MinPrice.Value)) &&
+                    (!filter.MaxPrice.HasValue || b.BookFormats.Any(f => f.Price <= filter.MaxPrice.Value)) ,
+                b => b.Author,
+                b => b.BookFormats,
+                b => b.Categories,
+                b => b.Reviews
+            );
+
+            var bookDto = _mapper.Map<IEnumerable<BookAdminDto>>(booksFromDb);
+
+            foreach (var book in bookDto)
+            {
+                var promotion = await _promotionService.GetBestPromotionForBookAsync(book.Id, book.Price);
+                if (promotion != null)
+                {
+                    book.Promotion = promotion;
+                }
+            }
+            return bookDto;
         }
     }
 }

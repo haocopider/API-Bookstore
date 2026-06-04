@@ -38,5 +38,37 @@ namespace Bookstore.Api.Controllers
             if (!authors.Any()) return NotFound(new { Message = "Không tìm thấy tác giả phù hợp." });
             return Ok(authors);
         }
+
+        // [HasPermission("MANAGE_CATALOG")]
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateAuthorDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            await _authorService.CreateAuthorAsync(request);
+            return Ok(new { message = "Thêm tác giả thành công." });
+        }
+
+        // [HasPermission("MANAGE_CATALOG")]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateAuthorDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var success = await _authorService.UpdateAuthorAsync(id, request);
+            if (!success) return NotFound(new { message = "Không tìm thấy tác giả để cập nhật." });
+
+            return Ok(new { message = "Cập nhật tác giả thành công." });
+        }
+
+        // [HasPermission("MANAGE_CATALOG")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var success = await _authorService.DeleteAuthorAsync(id);
+            if (!success) return NotFound(new { message = "Không tìm thấy tác giả để xóa." });
+
+            return Ok(new { message = "Xóa tác giả thành công." });
+        }
     }
 }

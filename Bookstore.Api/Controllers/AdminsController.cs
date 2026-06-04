@@ -2,25 +2,30 @@
 using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Bookstore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [HasPermission("MANAGE_HR")]
+    //[HasPermission("MANAGE_HR")]
     public class AdminsController : ControllerBase
     {
         private readonly IAdminService _adminService;
 
-        public AdminsController(IAdminService adminManagementService)
+        public AdminsController(IAdminService adminService)
         {
-            _adminService = adminManagementService;
+            _adminService = adminService;
         }
 
         // --- ENDPOINTS QUẢN LÝ NHÂN VIÊN (ADMIN) ---
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginAdminRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var response = await _adminService.LoginAdminAsync(request);
+            if (!response.IsSuccess) return Unauthorized(new { message = response.ErrorMessage });
+            return Ok(new { token = response.Token, refreshToken = response.RefreshToken });
+        }
 
         [HttpGet("staff")]
         public async Task<IActionResult> GetAllStaff()

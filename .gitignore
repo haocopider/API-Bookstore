@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Firebase
+*.json
+bookstore-1007e-firebase-adminsdk-fbsvc-94d9c422e9.json

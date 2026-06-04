@@ -35,6 +35,10 @@ public partial class Admin
 
     public string UserName { get; set; } = null!;
 
+    public string? RefreshToken { get; set; }
+
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();

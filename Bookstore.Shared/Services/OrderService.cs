@@ -10,11 +10,13 @@ namespace Bookstore.Shared.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly FirebaseNotificationService _notification;
 
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, FirebaseNotificationService notification)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _notification = notification;
         }
 
         // 0: Chờ, 1:Giao, 2:Đã giao, 3.Hoàn thành, 4.Huỷ
@@ -177,6 +179,105 @@ namespace Bookstore.Shared.Services
             order.Status = 4; 
             _unitOfWork.Orders.Update(order);
             await _unitOfWork.CommitAsync();
+            return true;
+        }
+
+        // =================================================================
+        // --- CÁC HÀM DÀNH CHO ADMIN ---
+        // =================================================================
+
+        public async Task<IEnumerable<OrderDto>> GetAllOrdersForAdminAsync(int? status = null)
+        {
+            var orders = await _unitOfWork.Orders.FindAsync(
+                o => !status.HasValue || o.Status == status.Value,
+                o => o.OrderItems,
+                o => o.User
+            );
+
+            var sortedOrders = orders.OrderByDescending(o => o.OrderDate);
+
+            return _mapper.Map<IEnumerable<OrderDto>>(sortedOrders);
+        }
+
+        public async Task<bool> UpdateOrderStatusByAdminAsync(int orderId, int newStatus)
+        {
+            var order = await _unitOfWork.Orders.GetFirstOrDefaultAsync(
+                filter: o => o.Id == orderId,
+                includes: o => o.OrderItems
+            );
+            var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(u => u.Id == order.UserId);
+
+            if (order == null) return false;
+
+            if (order.Status == newStatus) return true;
+
+            if (newStatus == 4 && order.Status != 4)
+            {
+                // 1.1. Hoàn lại kho cho BookFormat
+                var itemIds = order.OrderItems.Select(i => i.ItemId).ToList();
+                var formatsInDb = await _unitOfWork.BookFormats.FindAsync(f => itemIds.Contains(f.Id));
+
+
+                foreach (var item in order.OrderItems)
+                {
+                    var format = formatsInDb.FirstOrDefault(f => f.Id == item.ItemId);
+                    if (format != null)
+                    {
+                        format.Stock += item.Quantity;
+                        _unitOfWork.BookFormats.Update(format);
+                    }
+                }
+
+                // 1.2. Hoàn lại điểm tích lũy mà User đã dùng khi đặt hàng
+                if (order.PointIsUsed > 0)
+                {
+                    if (user != null)
+                    {
+                        user.CurrentPoints += order.PointIsUsed ?? 0;
+                        _unitOfWork.Users.Update(user);
+                    }
+                }
+            }
+
+            // 2. LOGIC HOÀN THÀNH ĐƠN (3): Cộng điểm thưởng tích lũy cho User
+            // Tính năng tương tự như khách hàng tự ấn "Đã nhận hàng"
+            if (newStatus == 3 && order.Status != 3)
+            {
+                if (user != null)
+                {
+                    int pointsEarned = (int)(order.FinalAmount / 10000); // 10k = 1 điểm
+                    user.CurrentPoints += pointsEarned;
+                    user.TotalPoints += pointsEarned;
+                    user.Rank = (int)RankHelper.GetRank(user.TotalPoints);
+                    _unitOfWork.Users.Update(user);
+                }
+            }
+
+            // Cập nhật trạng thái
+            order.Status = newStatus;
+
+            _unitOfWork.Orders.Update(order);
+            await _unitOfWork.CommitAsync();
+
+            // === GỬI THÔNG BÁO CHO KHÁCH HÀNG ===
+            if (user != null && !string.IsNullOrEmpty(user.FcmToken))
+            {
+                string statusText = newStatus switch
+                {
+                    1 => "đang được giao đến bạn",
+                    2 => "đã được giao thành công",
+                    3 => "đã hoàn thành. Cảm ơn bạn!",
+                    4 => "đã bị hủy",
+                    _ => "đang được xử lý"
+                };
+
+                string title = "Cập nhật đơn hàng";
+                string body = $"Đơn hàng #{order.OrderCode} của bạn {statusText}.";
+
+                // Chạy ngầm việc gửi thông báo để không làm chậm API
+                _ = _notification.SendNotificationAsync(user.FcmToken, title, body);
+            }
+
             return true;
         }
     }

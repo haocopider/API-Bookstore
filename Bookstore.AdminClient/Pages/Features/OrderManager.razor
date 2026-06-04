@@ -1,0 +1,217 @@
+﻿
+<div class="card mb-4 shadow-sm border-0">
+    <div class="card-header d-flex align-items-center justify-content-between border-bottom">
+        <h5 class="card-title m-0 fw-bold">Quản lý Đơn hàng</h5>
+        <span class="badge bg-label-primary rounded-pill px-3">Cập nhật tự động</span>
+    </div>
+
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="p-5 text-center"><div class="spinner-border text-success"></div></div>
+        }
+        else if (orders == null || !orders.Any())
+        {
+            <div class="p-5 text-center text-muted">Chưa có đơn hàng nào.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã ĐH</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng SP</th>
+                            <th>Thanh toán</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in orders)
+                        {
+                            <tr>
+                                <td class="fw-bold text-primary">#@order.OrderCode</td>
+                                <td><small>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td>@order.TotalItems SP</td>
+                                <td class="fw-bold text-dark">@order.FinalAmount.ToString("N0")đ</td>
+                                <td>
+                                    @* 0: Chờ, 1:Giao, 2:Đã giao, 3.Hoàn thành, 4.Huỷ *@
+                                    @switch (order.Status)
+                                    {
+                                        case 0:
+                                            <span class="badge bg-label-warning">Chờ xử lý</span>
+                                            break;
+                                        case 1:
+
+                                            <span class="badge bg-label-info">Đang giao hàng</span>
+                                            break;
+                                        case 2:
+
+                                            <span class="badge bg-label-primary">Đã giao</span>
+                                            break;
+                                        case 3:
+
+                                            <span class="badge bg-label-success">Hoàn thành</span>
+                                            break;
+                                        case 4:
+
+                                            <span class="badge bg-label-danger">Đã hủy</span>
+                                            break;
+                                        default:
+
+                                            <span class="badge bg-label-secondary">Không rõ</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-icon btn-outline-secondary me-1" title="Xem chi tiết" @onclick="() => OpenDetailModal(order)">
+                                        <i class="bx bx-show"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (isDetailOpen && selectedOrder != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-bold">Chi tiết Đơn hàng: <span class="text-primary">#@selectedOrder.OrderCode</span></h5>
+                    <button type="button" class="btn-close" @onclick="() => isDetailOpen = false"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="card border-0 shadow-sm bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bx bx-user-pin me-2"></i>Thông tin nhận hàng</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <span class="text-muted small d-block">Người nhận</span>
+                                    <span class="fw-semibold fs-6">@selectedOrder.ReceiverName</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <span class="text-muted small d-block">Số điện thoại</span>
+                                    <span class="fw-semibold fs-6">@selectedOrder.PhoneNumber</span>
+                                </div>
+                                <div class="col-12">
+                                    <span class="text-muted small d-block">Địa chỉ giao hàng</span>
+                                    <span class="fw-semibold">@selectedOrder.ShippingAddress</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-primary mb-3"><i class="bx bx-box me-2"></i>Sản phẩm đã đặt (@selectedOrder.TotalItems)</h6>
+                    <div class="table-responsive mb-4 border rounded shadow-sm">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th scope="col" style="width: 15%">Hình ảnh</th>
+                                    <th scope="col" class="text-start" style="width: 35%">Tên sản phẩm</th>
+                                    <th scope="col">Đơn giá</th>
+                                    <th scope="col">Số lượng</th>
+                                    <th scope="col" class="text-end pe-3">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in selectedOrder.Items)
+                                {
+                                    <tr>
+                                        <td class="text-center py-2">
+                                            <img src="@item.ImageUrl" alt="@item.BookTitle" class="img-thumbnail rounded shadow-sm" style="width: 60px; height: 80px; object-fit: cover;" onerror="this.src='/assets/img/default-book.png'" />
+                                        </td>
+                                        <td class="text-start fw-semibold">@item.BookTitle</td>
+                                        <td class="text-center">@item.UnitPrice.ToString("N0")đ</td>
+                                        <td class="text-center fw-bold text-primary">x @item.Quantity</td>
+                                        <td class="text-end fw-bold text-dark pe-3">@((item.UnitPrice * item.Quantity).ToString("N0"))đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end mb-2">
+                        <div class="bg-light p-3 rounded shadow-sm border" style="min-width: 300px;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-muted text-uppercase">Tổng thành tiền:</span>
+                                <span class="fw-bold text-danger fs-5">@selectedOrder.TotalAmount.ToString("N0")đ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-top">
+                    @if (selectedOrder.Status == 0)
+                    {
+                        <button type="button" class="btn btn-outline-danger me-auto fw-bold" @onclick="() => selectedOrder.Status = 4">
+                            <i class="bx bx-x-circle me-1"></i> Hủy đơn
+                        </button>
+                        <button type="button" class="btn btn-success fw-bold px-4" @onclick="() => selectedOrder.Status = 1">
+                            <i class="bx bx-check-circle me-1"></i> Xác nhận đơn
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="me-auto text-muted fst-italic">
+                            Đơn hàng đã được xử lý
+                        </div>
+                    }
+
+                    <button type="button" class="btn btn-secondary" @onclick="() => isDetailOpen = false">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<OrderDto>? orders;
+    private bool isLoading = true;
+    private bool isDetailOpen = false;
+    private OrderDto? selectedOrder;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        // API lấy tất cả đơn hàng cho Admin
+        orders = await Http.GetFromJsonAsync<List<OrderDto>>("api/orders/admin");
+        isLoading = false;
+    }
+
+    private void OpenDetailModal(OrderDto order)
+    {
+        selectedOrder = order;
+        isDetailOpen = true;
+    }
+
+    private async Task UpdateOrderStatus()
+    {
+        if (selectedOrder == null) return;
+
+        var res = await Http.PutAsJsonAsync($"api/orders/admin/{selectedOrder.Id}/status", selectedOrder.Status);
+
+        if (res.IsSuccessStatusCode)
+        {
+            await JSR.InvokeVoidAsync("alert", "Đã cập nhật trạng thái!");
+            isDetailOpen = false;
+            await LoadData();
+        }
+        else
+        {
+            await JSR.InvokeVoidAsync("alert", "Lỗi cập nhật!");
+        }
+    }
+}

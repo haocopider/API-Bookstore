@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Bookstore.AdminClient/Bookstore.AdminClient.csproj" Id="0a2f5ac3-7023-4b32-a6f0-55a3d5a3c665" />
   <Project Path="Bookstore.Api/Bookstore.Api.csproj" />
   <Project Path="Bookstore.Shared/Bookstore.Shared.csproj" />
 </Solution>

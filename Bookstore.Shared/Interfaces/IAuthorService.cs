@@ -11,5 +11,9 @@ namespace Bookstore.Shared.Interfaces
         Task<IEnumerable<AuthorDto>> GetAllAuthorsAsync();
         Task<AuthorDto?> GetAuthorByIdAsync(int id);
         Task<IEnumerable<AuthorDto>> SearchAuthorsAsync(string name);
+
+        Task<bool> CreateAuthorAsync(CreateAuthorDto request);
+        Task<bool> UpdateAuthorAsync(int id, UpdateAuthorDto request);
+        Task<bool> DeleteAuthorAsync(int id);
     }
 }

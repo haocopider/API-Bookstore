@@ -1,0 +1,99 @@
+﻿<div class="card mb-4 shadow-sm border-0">
+    <div class="card-header d-flex align-items-center justify-content-between border-bottom">
+        <h5 class="card-title m-0 fw-bold">Quản lý Tác giả</h5>
+        <button class="btn btn-primary" @onclick="OpenCreateForm">
+            <i class="bx bx-plus me-1"></i> Thêm tác giả
+        </button>
+    </div>
+    
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>
+        }
+        else if (authors == null || !authors.Any())
+        {
+            <div class="p-5 text-center text-muted">Chưa có dữ liệu tác giả.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">STT</th>
+                            <th style="width: 80px;">Avatar</th>
+                            <th>Tên tác giả</th>
+                            <th>Tiểu sử</th>
+                            <th class="text-center" style="width: 120px;">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < authors.Count; i++)
+                        {
+                            var author = authors[i];
+                            <tr>
+                                <td class="text-center text-muted fw-bold">@(i + 1)</td>
+                                <td>
+                                    <img src="@(string.IsNullOrEmpty(author.AvatarUrl) ? "/assets/img/avatars/1.png" : author.AvatarUrl)" 
+                                         class="rounded-circle object-fit-cover border" width="45" height="45" alt="@author.Name" />
+                                </td>
+                                <td class="fw-bold text-dark">@author.Name</td>
+                                <td class="text-truncate" style="max-width: 250px;">@(author.Bio ?? "Chưa cập nhật")</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-icon btn-outline-primary me-1" @onclick="() => OpenEditForm(author.Id)">
+                                        <i class="bx bx-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-icon btn-outline-danger" @onclick="() => DeleteAuthor(author.Id, author.Name)">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (isFormOpen)
+{
+    <AuthorForm AuthorId="selectedAuthorId" OnClose="CloseForm" OnSaved="ReloadData" />
+}
+
+@code {
+    private List<AuthorDto>? authors;
+    private bool isLoading = true;
+    private bool isFormOpen = false;
+    private int? selectedAuthorId;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        authors = await Http.GetFromJsonAsync<List<AuthorDto>>("api/authors");
+        isLoading = false;
+    }
+
+    private void OpenCreateForm() { selectedAuthorId = null; isFormOpen = true; }
+    private void OpenEditForm(int id) { selectedAuthorId = id; isFormOpen = true; }
+    private void CloseForm() { isFormOpen = false; }
+    
+    private async Task ReloadData()
+    {
+        isFormOpen = false;
+        await LoadData();
+    }
+
+    private async Task DeleteAuthor(int id, string name)
+    {
+        if (await JSR.InvokeAsync<bool>("confirm", $"Bạn có chắc chắn muốn xóa tác giả '{name}'?"))
+        {
+            var res = await Http.DeleteAsync($"api/authors/{id}");
+            if (res.IsSuccessStatusCode) await LoadData();
+            else await JSR.InvokeVoidAsync("alert", "Có lỗi xảy ra khi xóa.");
+        }
+    }
+}

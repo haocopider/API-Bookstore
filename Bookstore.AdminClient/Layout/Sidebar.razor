@@ -1,0 +1,164 @@
+﻿<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    
+    @* 1. LOGO (Cố định ở trên) *@
+    <div class="app-brand demo mb-3 position-relative d-flex justify-content-center align-items-center"
+         style="min-height: 90px; flex-shrink: 0;"> @* flex-shrink: 0 để không bị co lại *@
+
+        <a href="/" class="app-brand-link d-flex justify-content-center align-items-center">
+            <img src="../assets/img/logo.png"
+                 alt="Logo"
+                 class="app-brand-logo demo"
+                 style="width: 72px; height: auto; transition: transform .3s;"
+                 onmouseover="this.style.transform='scale(1.08)'"
+                 onmouseout="this.style.transform='scale(1)'" />
+        </a>
+        <a href="javascript:void(0);"
+           class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
+            <i class="bx bx-chevron-left bx-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-inner-shadow"></div>
+
+  
+    <ul class="menu-inner py-1 flex-grow-1 custom-scrollbar" 
+        style="overflow-y: auto; overflow-x: hidden;">
+
+        <li class="menu-item active">
+            <a href="/" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>Trang chủ</div>
+            </a>
+        </li>
+
+        <AuthorizeView Roles="ADMIN">
+            <Authorized>
+                <li class="menu-header small text-uppercase"><span class="menu-header-text">Quản trị viên</span></li>
+                <li class="menu-item">
+                    <a href="/admin/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+                        <div>Dashboard</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/admin/manage-roleperm" class="menu-link">
+                        <i class="menu-icon bi bi-person-lines-fill"></i>
+                        <div>Phân quyền</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                        <i class="menu-icon tf-icons bx bx-data"></i>
+                        <div>Dữ liệu</div>
+                    </a>
+                    <ul class="menu-sub">
+                        <li class="menu-item"><a href="/admin/manage-categories" class="menu-link"><div>Danh mục</div></a></li>
+                        <li class="menu-item"><a href="/admin/manage-brands" class="menu-link"><div>Thương hiệu</div></a></li>
+                        <li class="menu-item"><a href="/admin/manage-products" class="menu-link"><div>Sản phẩm</div></a></li>
+                    </ul>
+                </li>
+                <li class="menu-item">
+                    <a href="/admin/manage-accounts" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-user-pin"></i>
+                        <div>Tài khoản</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/admin/manage-stores" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-store"></i>
+                        <div>Cửa hàng</div>
+                    </a>
+                </li>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="STORE">
+            <Authorized>
+                <li class="menu-header small text-uppercase"><span class="menu-header-text">Kênh người bán</span></li>
+                <li class="menu-item">
+                    <a href="/store/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                        <div>Tổng quan</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/store/manage-products" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-package"></i>
+                        <div>Sản phẩm</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/store/manage-orders" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-receipt"></i>
+                        <div>Đơn hàng</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/store/feedbacks" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-message-square-dots"></i>
+                        <div>Đánh giá & Shop</div>
+                    </a>
+                </li>
+            </Authorized>
+        </AuthorizeView>
+        
+        <AuthorizeView>
+             <Authorized>
+                <li class="menu-header small text-uppercase"><span class="menu-header-text">Cá nhân</span></li>
+                <li class="menu-item">
+                    <a href="/profile" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-user"></i>
+                        <div>Hồ sơ của tôi</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/my-cart" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-cart"></i>
+                        <div>Giỏ hàng</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                        <i class="menu-icon tf-icons bx bx-shopping-bag"></i>
+                        <div>Đơn mua</div>
+                    </a>
+                    <ul class="menu-sub">
+                        <li class="menu-item"><a href="/my-orders?status=All" class="menu-link"><div>Tất cả</div></a></li>
+                        <li class="menu-item"><a href="/my-orders?status=Pending" class="menu-link"><div>Chờ xác nhận</div></a></li>
+                        <li class="menu-item"><a href="/my-orders?status=Shipping" class="menu-link"><div>Đang giao</div></a></li>
+                        <li class="menu-item"><a href="/my-orders?status=Completed" class="menu-link"><div>Lịch sử & Đánh giá</div></a></li>
+                    </ul>
+                </li>
+             </Authorized>
+        </AuthorizeView>
+    </ul>
+
+
+</aside>
+
+
+<style>
+    /* Ẩn thanh cuộn trên Firefox */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #d9dee3 transparent;
+    }
+
+    /* Tùy chỉnh thanh cuộn trên Chrome/Safari/Edge */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 20px;
+    }
+
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: rgba(105, 108, 255, 0.4); /* Màu tím chủ đạo */
+    }
+</style>

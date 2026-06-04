@@ -80,6 +80,13 @@ namespace Bookstore.Api.Controllers
             return Ok(new { Message = "Đánh giá thành công." });
         }
 
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetAllBookForAdmin([FromQuery] BookFilterRequestDto filter)
+        {
+            var books = await _bookService.GetAllBooksForAdminAsync(filter);
+            return Ok(books);
+        }
+
         [HttpPost("admin/create")]
         // [HasPermission("CREATE_BOOK")]
         public async Task<IActionResult> CreateBook([FromBody] CreateBookDto request)

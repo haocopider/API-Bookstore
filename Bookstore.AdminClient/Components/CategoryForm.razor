@@ -1,0 +1,100 @@
+﻿
+<div class="modal-backdrop fade show"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title mb-0 fw-semibold">
+                    @(CategoryId == null ? "✨ Thêm thể loại mới" : "✏️ Cập nhật thể loại")
+                </h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="OnClose"></button>
+            </div>
+
+            <div class="modal-body bg-light">
+                @if (isLoading)
+                {
+                    <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                        <div class="spinner-border text-info mb-3"></div>
+                        <div class="text-muted">Đang tải dữ liệu...</div>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="categoryModel" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên thể loại <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="categoryModel.Name" placeholder="VD: Tiểu thuyết, Lịch sử..." />
+                                    <ValidationMessage For="@(() => categoryModel.Name)" class="text-danger small" />
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label">Đường dẫn (Slug)</label>
+                                    <InputText class="form-control" @bind-Value="categoryModel.Slug" placeholder="tieu-thuyet (Để trống tự sinh)" />
+                                </div>
+
+                                <div class="text-end border-top pt-3">
+                                    <button type="button" class="btn btn-secondary me-2" @onclick="OnClose">Hủy</button>
+                                    <button type="submit" class="btn btn-info text-white" disabled="@isSubmitting">
+                                        @if (isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bx bx-save me-1"></i> Lưu lại
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? CategoryId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private CreateCategoryDto categoryModel = new();
+    private bool isLoading = false;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CategoryId.HasValue)
+        {
+            isLoading = true;
+            var existing = await Http.GetFromJsonAsync<CategoryDto>($"api/categories/{CategoryId.Value}");
+            if (existing != null)
+            {
+                categoryModel = new CreateCategoryDto
+                {
+                    Name = existing.Name,
+                    Slug = existing.Slug
+                };
+            }
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        HttpResponseMessage res;
+
+        if (CategoryId.HasValue)
+            res = await Http.PutAsJsonAsync($"api/categories/{CategoryId.Value}", categoryModel);
+        else
+            res = await Http.PostAsJsonAsync("api/categories", categoryModel);
+
+        isSubmitting = false;
+
+        if (res.IsSuccessStatusCode)
+            await OnSaved.InvokeAsync();
+        else
+            await JSR.InvokeVoidAsync("alert", "Có lỗi xảy ra khi lưu dữ liệu!");
+    }
+}

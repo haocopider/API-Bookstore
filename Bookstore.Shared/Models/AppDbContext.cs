@@ -192,6 +192,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
                 .IsUnicode(false);
+            entity.Property(e => e.RefreshToken).HasMaxLength(500);
             entity.Property(e => e.UserName).HasMaxLength(100);
 
             entity.HasOne(d => d.Role).WithMany(p => p.Admins)
@@ -293,18 +294,19 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Conversa__3214EC0738ADC020");
 
+            entity.HasIndex(e => e.Id, "IX_Conversations");
+
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(getdate())", "DF__Conversat__Creat__6EF57B66")
                 .HasColumnType("datetime");
-            entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.Status).HasDefaultValue(0, "DF__Conversat__Statu__6E01572D");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Conversations)
                 .HasForeignKey(d => d.CustomerId)
-                .HasConstraintName("FK__Conversat__Custo__6D0D32F4");
+                .HasConstraintName("FK_Conversations_Customer");
 
             entity.HasOne(d => d.Staff).WithMany(p => p.Conversations)
                 .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Conversations_Admin");
         });
 
@@ -313,7 +315,7 @@ public partial class AppDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Messages__3214EC07329E14A6");
 
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(getdate())", "DF__Messages__Create__72C60C4A")
                 .HasColumnType("datetime");
             entity.Property(e => e.MessageType).HasMaxLength(20);
 

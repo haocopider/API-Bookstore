@@ -13,6 +13,8 @@ namespace Bookstore.Shared.Dtos
         public int DiscountType { get; set; }
         public decimal DiscountValue { get; set; }
         public DateTime EndDate { get; set; }
+        public int[] BookIds { get; set; } = Array.Empty<int>();
+        public int[] CategoryIds { get; set; } = Array.Empty<int>();
     }
 
     public class CreatePromotionRequest

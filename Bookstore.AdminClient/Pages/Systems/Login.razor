@@ -1,0 +1,120 @@
+﻿@page "/login"
+
+<PageTitle>Đăng Nhập</PageTitle>
+
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+    <div class="card shadow-lg border-0 rounded-4 overflow-hidden" style="max-width: 900px; width: 100%;">
+        <div class="row g-0">
+            
+            <div style="background-color: rgba(105, 108, 255, 0.16);" class="col-md-6 d-none d-md-flex align-items-center justify-content-center bg-opacity-10 p-5">
+                <div class="text-center">
+                    <img src="https://static.vecteezy.com/system/resources/previews/013/077/069/large_2x/open-book-logo-design-template-open-book-illustration-vector.jpg" class="img-fluid mb-3" style="max-height: 200px;" alt="Logo" />
+                    <h4 class="fw-bold text-primary">Chào mừng trở lại!</h4>
+                    <p class="text-dark">Đăng nhập để tiếp tục quản lý cửa hàng và mua sắm.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 bg-white p-5">
+                <div class="d-flex align-items-center mb-4">
+                    <img src="https://static.vecteezy.com/system/resources/previews/013/077/069/large_2x/open-book-logo-design-template-open-book-illustration-vector.jpg" class="img-fluid d-md-none me-3" style="width: 50px;" />
+                    <h3 class="fw-bold m-0">Đăng Nhập</h3>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> @errorMessage
+                    </div>
+                }
+
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên đăng nhập</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                            <InputText class="form-control" @bind-Value="loginModel.UserName" placeholder="Nhập username" />
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.UserName)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                            <InputText type="@passwordType" class="form-control" @bind-Value="loginModel.Password" placeholder="Nhập mật khẩu" />
+                            <button type="button" class="btn btn-light border" @onclick="TogglePassword">
+                                <i class="bi @(showPassword ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="loginModel.RememberMe" id="rememberMe" />
+                            <label class="form-check-label text-muted" for="rememberMe">Ghi nhớ tôi</label>
+                        </div>
+                        <a href="/forgot-password" class="text-decoration-none text-primary small">Quên mật khẩu?</a>
+                    </div>
+
+                    <div class="d-grid mb-4">
+                        <button type="submit" class="btn btn-primary py-2 fw-bold" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span> <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>Đăng Nhập</span> 
+                                <i class="bi bi-arrow-right ms-2"></i>
+                            }
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <span class="text-muted">Chưa có tài khoản? </span>
+                        <a href="register" class="text-primary fw-bold text-decoration-none">Đăng ký ngay</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginDto loginModel = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+    
+    // Xử lý ẩn/hiện mật khẩu
+    private bool showPassword = false;
+    private string passwordType => showPassword ? "text" : "password";
+    private void TogglePassword() => showPassword = !showPassword;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await AuthService.Login(loginModel);
+            if(!success)
+            {
+                errorMessage = "Kiểm tra thông tin đăng nhập, hoặc tài khoản bạn đã bị khóa";
+                return;
+            };
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Đăng nhập thất bại: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

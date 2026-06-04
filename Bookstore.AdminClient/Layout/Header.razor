@@ -1,0 +1,111 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject NavigationManager Navigation
+
+<nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+     style="position: sticky; top: 0; z-index: 1000; width: 100%; border-bottom: 1px solid #d9dee3;"
+     id="layout-navbar">
+
+    <div class="navbar-nav-left d-flex align-items-center me-auto">
+        <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+            <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                <i class="bx bx-menu bx-sm"></i>
+            </a>
+        </div>
+        <div class="app-brand demo">
+            <a href="/" class="app-brand-link">
+                <img src="https://static.vecteezy.com/system/resources/previews/013/077/069/large_2x/open-book-logo-design-template-open-book-illustration-vector.jpg" alt="Logo" width="40" class="app-brand-logo demo" />
+                <span class="app-brand-text demo menu-text fw-bolder ms-2 text-capitalize" style="font-size: 1.25rem;">Bookstore Management</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="navbar-nav-right d-flex align-items-center ms-auto" id="navbar-collapse">
+        <ul class="navbar-nav flex-row align-items-center ms-auto">
+
+            <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
+                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <i class="bx bx-bell bx-sm"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end py-0">
+                    <li class="dropdown-header border-bottom">
+                        <span class="fw-semibold lh-1 me-auto">Thông báo</span>
+                    </li>
+                    <li>
+                        <div class="dropdown-item d-flex align-items-center justify-content-center p-3">
+                            <span class="text-muted">Không có thông báo mới</span>
+                        </div>
+                    </li>
+                </ul>
+            </li>
+
+            <AuthorizeView>
+                <Authorized>
+                    <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                        <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center" href="javascript:void(0);" data-bs-toggle="dropdown">
+                            <div class="avatar avatar-online me-2">
+                                <img src="/assets/img/avatars/1.png" alt="Avatar" class="w-px-40 h-auto rounded-circle" />
+                            </div>
+                            <div class="d-none d-sm-block text-start">
+                                <span class="fw-semibold d-block text-dark" style="line-height: 1.2;">
+                                    @context.User.Identity?.Name
+                                </span>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    @GetRoleName(context.User)
+                                </small>
+                            </div>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="/profile">
+                                    <i class="bx bx-user me-2"></i>
+                                    <span class="align-middle">Hồ sơ của tôi</span>
+                                </a>
+                            </li>
+                            <li>
+                                <div class="dropdown-divider"></div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" style="cursor: pointer;" @onclick="Logout">
+                                    <i class="bx bx-power-off me-2"></i>
+                                    <span class="align-middle">Đăng xuất</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </Authorized>
+
+                <NotAuthorized>
+                    <li class="nav-item">
+                        <a href="/login" class="btn btn-primary shadow-sm rounded-pill px-4">
+                            <i class="bx bx-log-in me-1"></i> Đăng nhập
+                        </a>
+                    </li>
+                </NotAuthorized>
+            </AuthorizeView>
+
+        </ul>
+    </div>
+</nav>
+
+@code {
+    // Hàm phụ trợ để lấy tên Role từ JWT Token / Claims
+    private string GetRoleName(ClaimsPrincipal user)
+    {
+        // Kiểm tra claim chuẩn của .NET
+        var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(role))
+        {
+            role = user.FindFirst("Role")?.Value;
+        }
+
+        return string.IsNullOrEmpty(role) ? "Người dùng" : role;
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

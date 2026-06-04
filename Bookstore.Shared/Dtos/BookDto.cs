@@ -7,6 +7,7 @@ namespace Bookstore.Shared.Dtos
         public string? SearchText { get; set; }
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }
+        public string? AuthorName { get; set; }
         public string? Tag { get; set; }
     }
 
@@ -20,6 +21,30 @@ namespace Bookstore.Shared.Dtos
         public string? Publisher { get; set; }
         public decimal Price { get; set; }
         public PromotionInfoDTO? Promotion { get; set; }
+    }
+
+    public class BookAdminDto
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = null!;
+        public string? Description { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? AuthorName { get; set; }
+        public string? Publisher { get; set; }
+        public decimal Price { get; set; }
+        public PromotionInfoDTO? Promotion { get; set; }
+        public int Stock { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
+    public class BookPerPage 
+    {
+        List<BookDto> Books { get; set; } = new List<BookDto>();
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public int TotalCount { get; set; }
+        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
     }
 
     public class CreateBookDto

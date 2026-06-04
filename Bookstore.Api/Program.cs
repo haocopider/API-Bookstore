@@ -1,9 +1,13 @@
+using Bookstore.Api.Hubs;
 using Bookstore.Shared.Helpers;
 using Bookstore.Shared.Interfaces;
 using Bookstore.Shared.Models;
 using Bookstore.Shared.Repositories;
 using Bookstore.Shared.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -15,19 +19,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                builder.Configuration.GetSection("Jwt:Token").Value!)),
-            ValidateIssuer = false,
-            ValidateAudience = false
-        };
-    });
 
 builder.Services.AddOpenApi();
 
@@ -41,9 +32,67 @@ builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IStatisticService, StatisticService>();
 //builder.Services.AddHostedService<OrderStatusUpdaterService>();
+builder.Services.AddScoped<FirebaseNotificationService>();
 
 builder.Services.AddAutoMapper(config => config.AddProfile<MappingProfile>());
+
+builder.Services.AddSignalR();
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                builder.Configuration.GetSection("Jwt:Key").Value!)),
+            ValidateIssuer = false,
+            ValidateAudience = false
+        };
+
+        options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+
+                    var path = context.HttpContext.Request.Path;
+
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        path.StartsWithSegments("/chathub"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
+    });
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazorClient", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://localhost:7186", // Blazor WASM (https)
+                "http://localhost:5244"   // Blazor WASM (http)
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+FirebaseApp.Create(new AppOptions()
+{
+    Credential = GoogleCredential.FromFile("bookstore-1007e-firebase-adminsdk-fbsvc-94d9c422e9.json") 
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -52,11 +101,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseFileServer();
+app.UseStaticFiles();
+
+app.UseCors("AllowBlazorClient");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHub<Bookstore.Api.Hubs.ChatHub>("/chathub");
+app.MapHub<ChatHub>("/chathub");
 app.MapControllers();
 
 app.Run();

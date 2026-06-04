@@ -1,7 +1,9 @@
 ﻿using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
+using Bookstore.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace Bookstore.Api.Controllers
@@ -133,6 +135,26 @@ namespace Bookstore.Api.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpPost("update-fcm-token")]
+        public async Task<IActionResult> UpdateFcmToken([FromBody] UpdateFcmTokenRequest request)
+        {
+            // Lấy UserId của người dùng đang đăng nhập từ JWT Token Claims
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Phiên đăng nhập không hợp lệ." });
+            }
+            
+            var success = await _authService.UpdateFcmToken(userId, request.Token);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Không thể cập nhật mã thiết bị." });
+            }
+
+            return Ok(new { message = "Cập nhật mã thiết bị thành công." });
         }
     }
 }

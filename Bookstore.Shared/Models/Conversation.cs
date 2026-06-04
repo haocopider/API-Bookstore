@@ -7,17 +7,19 @@ public partial class Conversation
 {
     public int Id { get; set; }
 
-    public int? CustomerId { get; set; }
+    public int CustomerId { get; set; }
 
-    public int? StaffId { get; set; }
+    public int StaffId { get; set; }
 
     public int? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
-    public virtual User? Customer { get; set; }
+    public DateTime? LastMessageAt { get; set; }
+
+    public virtual User Customer { get; set; } = null!;
 
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    public virtual Admin? Staff { get; set; }
+    public virtual Admin Staff { get; set; } = null!;
 }

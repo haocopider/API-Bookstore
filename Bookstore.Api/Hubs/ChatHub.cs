@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace Bookstore.Api.Hubs
 {
-    [Authorize] // Bắt buộc phải có JWT Token (Khách hoặc Nhân viên)
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -16,54 +16,113 @@ namespace Bookstore.Api.Hubs
             _unitOfWork = unitOfWork;
         }
 
-        // Gọi khi người dùng (Khách hoặc Admin) bấm vào xem một cuộc hội thoại
-        public async Task JoinConversation(int conversationId)
-        {
-            // Thêm Connection hiện tại vào Group mang tên ID của cuộc hội thoại
-            await Groups.AddToGroupAsync(Context.ConnectionId, conversationId.ToString());
-        }
-
-        // Rời khỏi cuộc hội thoại (khi tắt khung chat)
         public async Task LeaveConversation(int conversationId)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, conversationId.ToString());
+            await Groups.RemoveFromGroupAsync(
+                Context.ConnectionId,
+                conversationId.ToString()
+            );
         }
 
-        // Gửi tin nhắn
+        public async Task JoinConversation(int conversationId)
+        {
+            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId))
+                throw new HubException("Unauthorized");
+
+            var conversation = await _unitOfWork.Conversations
+                .GetFirstOrDefaultAsync(c => c.Id == conversationId);
+
+            if (conversation == null)
+                throw new HubException("Conversation not found");
+
+            // Lấy chuỗi Role và RoleId trực tiếp từ JWT Token
+            var roleClaim = Context.User?.FindFirst(ClaimTypes.Role)?.Value
+                         ?? Context.User?.FindFirst("Role")?.Value
+                         ?? "";
+
+            var roleIdClaim = Context.User?.FindFirst("RoleId")?.Value;
+
+            // Kiểm tra xem User hiện tại có phải là Admin/Staff không
+            // (Bao gồm Role = ADMIN, STAFF hoặc RoleId = 3)
+            bool isStaff = roleClaim.ToUpper() == "ADMIN"
+                        || roleClaim.ToUpper() == "STAFF"
+                        || roleIdClaim == "3";
+
+            // Nếu KHÔNG PHẢI là Admin/Staff, VÀ cũng KHÔNG PHẢI chủ phòng chat -> Báo lỗi cấm
+            if (!isStaff && conversation.CustomerId != userId)
+            {
+                throw new HubException("Forbidden");
+            }
+
+            await Groups.AddToGroupAsync(
+                Context.ConnectionId,
+                conversationId.ToString()
+            );
+        }
+
         public async Task SendMessage(int conversationId, string content, string messageType = "Text")
         {
-            // 1. Lấy ID của người gửi từ JWT Token
             var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int senderId))
-                throw new HubException("Không xác định được danh tính người gửi.");
 
-            // 2. Lưu tin nhắn vào Database
+            if (!int.TryParse(userIdClaim, out int senderId))
+                throw new HubException("Unauthorized");
+
+            var conversation = await _unitOfWork.Conversations
+                .GetFirstOrDefaultAsync(c => c.Id == conversationId);
+
+            if (conversation == null)
+                throw new HubException("Conversation not found");
+
+            // Lấy chuỗi Role và RoleId trực tiếp từ JWT Token giống hàm trên
+            var roleClaim = Context.User?.FindFirst(ClaimTypes.Role)?.Value
+                         ?? Context.User?.FindFirst("Role")?.Value
+                         ?? "";
+
+            var roleIdClaim = Context.User?.FindFirst("RoleId")?.Value;
+
+            bool isStaff = roleClaim.ToUpper() == "ADMIN"
+                        || roleClaim.ToUpper() == "STAFF"
+                        || roleIdClaim == "3";
+
+            // Customer chỉ gửi được conversation của mình
+            if (!isStaff && conversation.CustomerId != senderId)
+            {
+                throw new HubException("Forbidden");
+            }
+
             var message = new Message
             {
                 ConversationId = conversationId,
                 SenderId = senderId,
                 Content = content,
+                IsAdmin = isStaff,
                 MessageType = messageType,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _unitOfWork.Messages.AddAsync(message);
+
+            conversation.LastMessageAt = DateTime.UtcNow;
+
             await _unitOfWork.CommitAsync();
 
-            // 3. Chuẩn bị payload trả về cho Client
-            var messageResponse = new
+
+            var response = new
             {
                 id = message.Id,
                 conversationId = message.ConversationId,
                 senderId = message.SenderId,
+                isAdmin = isStaff,
                 content = message.Content,
-                messageType = message.MessageType,
-                createdAt = message.CreatedAt
+                createdAt = message.CreatedAt,
+                messageType = message.MessageType
             };
 
-            // 4. Phát tin nhắn đến TẤT CẢ những ai đang ở trong Group (kể cả người vừa gửi)
-            // Client sẽ lắng nghe sự kiện "ReceiveMessage" để update UI
-            await Clients.Group(conversationId.ToString()).SendAsync("ReceiveMessage", messageResponse);
+            await Clients
+                .Group(conversationId.ToString())
+                .SendAsync("ReceiveMessage", response);
         }
     }
 }

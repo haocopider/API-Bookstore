@@ -35,7 +35,7 @@ namespace Bookstore.Api.Controllers
                 activeConv = new Conversation
                 {
                     CustomerId = customerId,
-                    Status = 0, // 0: Active
+                    Status = 0,
                     CreatedAt = DateTime.UtcNow
                 };
                 await _unitOfWork.Conversations.AddAsync(activeConv);
@@ -48,7 +48,8 @@ namespace Bookstore.Api.Controllers
                 CustomerId = activeConv.CustomerId,
                 StaffId = activeConv.StaffId,
                 Status = activeConv.Status,
-                CreatedAt = activeConv.CreatedAt
+                CreatedAt = activeConv.CreatedAt,
+                LastMessageAt = activeConv.LastMessageAt
             });
         }
 
@@ -56,20 +57,42 @@ namespace Bookstore.Api.Controllers
         [HttpGet("{conversationId}/messages")]
         public async Task<IActionResult> GetMessages(int conversationId)
         {
-            // Cần lấy Messages và sắp xếp theo thời gian
-            var messages = await _unitOfWork.Messages.FindAsync(m => m.ConversationId == conversationId);
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var history = messages.OrderBy(m => m.CreatedAt).Select(m => new MessageDto
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var conversation = await _unitOfWork.Conversations
+                .GetFirstOrDefaultAsync(c => c.Id == conversationId);
+
+            if (conversation == null)
+                return NotFound();
+
+            bool isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin && conversation.CustomerId != userId)
             {
-                Id = m.Id,
-                ConversationId = m.ConversationId,
-                SenderId = m.SenderId,
-                Content = m.Content,
-                MessageType = m.MessageType,
-                CreatedAt = m.CreatedAt
-            });
+                return Forbid();
+            }
 
-            return Ok(history);
+            var messages = await _unitOfWork.Messages.FindAsync(
+                m => m.ConversationId == conversationId
+            );
+
+            var result = messages
+                .OrderBy(m => m.CreatedAt)
+                .Select(m => new MessageDto
+                {
+                    Id = m.Id,
+                    ConversationId = m.ConversationId,
+                    SenderId = m.SenderId,
+                    Content = m.Content,
+                    IsAdmin = m.IsAdmin,
+                    MessageType = m.MessageType,
+                    CreatedAt = m.CreatedAt
+                });
+
+            return Ok(result);
         }
 
         // 3. Dành cho Admin: Lấy danh sách tất cả các Conversation đang mở
@@ -87,7 +110,6 @@ namespace Bookstore.Api.Controllers
             {
                 Id = c.Id,
                 CustomerId = c.CustomerId,
-                CustomerName = c.Customer?.FullName,
                 StaffId = c.StaffId,
                 Status = c.Status,
                 CreatedAt = c.CreatedAt

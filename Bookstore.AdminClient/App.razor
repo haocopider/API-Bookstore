@@ -1,0 +1,18 @@
+﻿@using Bookstore.AdminClient.Pages
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <AccessDenied />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <NotFound></NotFound>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

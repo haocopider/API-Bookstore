@@ -18,13 +18,15 @@ namespace Bookstore.Shared.Dtos
     public class OrderDto
     {
         public int Id { get; set; }
+        public string ReceiverName { get; set; }
+        public string PhoneNumber { get; set; }
+        public string ShippingAddress { get; set; }
         public int PaymentMethod { get; set; }
         public DateTime OrderDate { get; set; }
         public string OrderCode { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public decimal FinalAmount { get; set; }
         public int Status { get; set; }
-        public string ShippingAddress { get; set; }
         public int TotalItems => Items.Sum(i => i.Quantity);
         public List<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
     }

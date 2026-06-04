@@ -1,0 +1,176 @@
+﻿<div class="modal-backdrop fade show"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title mb-0 fw-semibold">
+                    @(StaffId == null ? "✨ Thêm nhân viên mới" : "✏️ Cập nhật nhân viên")
+                </h5>
+                <button type="button" class="btn-close" @onclick="OnClose"></button>
+            </div>
+
+            <div class="modal-body bg-light">
+                @if (isLoading)
+                {
+                    <div class="d-flex justify-content-center py-4"><div class="spinner-border text-danger"></div></div>
+                }
+                else
+                {
+                    <EditForm Model="this" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body row g-3">
+
+                                @if (StaffId == null)
+                                {
+                                    @* --- GIAO DIỆN TẠO MỚI --- *@
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Tài khoản đăng nhập <span class="text-danger">*</span></label>
+                                        <InputText class="form-control" @bind-Value="createModel.Username" placeholder="VD: admin_sale" />
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                                        <InputText type="password" class="form-control" @bind-Value="createModel.Password" placeholder="Nhập mật khẩu..." />
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Email</label>
+                                        <InputText class="form-control" @bind-Value="createModel.Email" placeholder="email@domain.com" />
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Phân quyền Vai trò (Role) <span class="text-danger">*</span></label>
+                                        <InputSelect class="form-select" @bind-Value="createModel.RoleId">
+                                            <option value="0">-- Chọn vai trò --</option>
+                                            @foreach (var role in roles)
+                                            {
+                                                <option value="@role.Id">@role.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @* --- GIAO DIỆN CẬP NHẬT --- *@
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Tài khoản đăng nhập</label>
+                                        <input type="text" class="form-control bg-light" value="@currentUsername" disabled />
+                                        <small class="text-muted">Không thể thay đổi tên đăng nhập.</small>
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Email</label>
+                                        <InputText class="form-control" @bind-Value="updateModel.Email" placeholder="email@domain.com" />
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <label class="form-label">Phân quyền Vai trò (Role) <span class="text-danger">*</span></label>
+                                        <InputSelect class="form-select" @bind-Value="updateModel.RoleId">
+                                            @foreach (var role in roles)
+                                            {
+                                                <option value="@role.Id">@role.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <div class="form-check form-switch mt-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="updateModel.IsActive" id="isActiveStaff" />
+                                            <label class="form-check-label @(updateModel.IsActive ? "text-success" : "text-danger") fw-bold" for="isActiveStaff">
+                                                @(updateModel.IsActive ? "Cho phép hoạt động" : "Tài khoản đang bị khóa")
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="text-end border-top pt-3 mt-3">
+                                    <button type="button" class="btn btn-secondary me-2" @onclick="OnClose">Hủy</button>
+                                    <button type="submit" class="btn btn-danger fw-bold shadow-sm" disabled="@isSubmitting">
+                                        @if (isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bx bx-save me-1"></i> Lưu dữ liệu
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? StaffId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    // Sử dụng chung 2 Model DTOs từ API
+    private CreateAdminRequest createModel = new();
+    private UpdateAdminRequest updateModel = new();
+    private string currentUsername = "";
+
+    private List<RoleDto> roles = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        // Load danh sách Roles để đổ vào Dropdown
+        var rolesData = await Http.GetFromJsonAsync<List<RoleDto>>("api/admins/roles");
+        if (rolesData != null) roles = rolesData;
+
+        // Nếu là Cập nhật, tải dữ liệu nhân viên cũ
+        if (StaffId.HasValue)
+        {
+            var existing = await Http.GetFromJsonAsync<AdminDto>($"api/admins/staff/{StaffId.Value}");
+            if (existing != null)
+            {
+                currentUsername = existing.Username;
+                updateModel = new UpdateAdminRequest
+                {
+                    Email = existing.Email,
+                    RoleId = existing.RoleId,
+                    IsActive = existing.IsActive
+                };
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        // Validation thủ công cho Dropdown
+        if ((StaffId == null && createModel.RoleId == 0) || (StaffId != null && updateModel.RoleId == 0))
+        {
+            await JSR.InvokeVoidAsync("alert", "Vui lòng chọn vai trò cho nhân viên!");
+            return;
+        }
+
+        isSubmitting = true;
+        HttpResponseMessage res;
+
+        if (StaffId.HasValue)
+        {
+            // API Cập nhật
+            res = await Http.PutAsJsonAsync($"api/admins/staff/{StaffId.Value}", updateModel);
+        }
+        else
+        {
+            // API Tạo mới
+            res = await Http.PostAsJsonAsync("api/admins/staff", createModel);
+        }
+
+        isSubmitting = false;
+
+        if (res.IsSuccessStatusCode)
+        {
+            await OnSaved.InvokeAsync();
+        }
+        else
+        {
+            var error = await res.Content.ReadAsStringAsync();
+            await JSR.InvokeVoidAsync("alert", "Lỗi: " + error);
+        }
+    }
+}

@@ -27,6 +27,21 @@ namespace Bookstore.Shared.Dtos
         [Required(ErrorMessage = "Vui lòng nhập Mật khẩu")]
         public string Password { get; set; } = string.Empty;
     }
+    public class LoginAdminRequest
+    {
+        [Required(ErrorMessage = "Vui lòng nhập Tên đăng nhập")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập Mật khẩu")]
+        public string Password { get; set; } = string.Empty;
+    }
+    public class AdminResponseDto
+    {
+        public bool IsSuccess { get; set; }
+        public string? ErrorMessage { get; set; }
+        public string? Token { get; set; }
+        public string? RefreshToken { get; set; }
+    }
 
     public class ChangePasswordDto
     {
@@ -64,5 +79,11 @@ namespace Bookstore.Shared.Dtos
         public int CurrentPoints { get; set; }
         public int TotalPoints { get; set; }
         public int Rank { get; set; }
+    }
+
+    public class UpdateFcmTokenRequest
+    {
+        [Required]
+        public string Token { get; set; } = null!;
     }
 }

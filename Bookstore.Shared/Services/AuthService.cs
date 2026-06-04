@@ -206,5 +206,18 @@ namespace Bookstore.Shared.Services
 
             return tokenHandler.WriteToken(token);
         }
+
+        public async Task<bool> UpdateFcmToken(int userId, string fcmToken)
+        {
+            var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return false;
+            }
+            user.FcmToken = fcmToken;
+            _unitOfWork.Users.Update(user);
+            var result = await _unitOfWork.CommitAsync();
+            return result > 0;
+        }
     }
 }

@@ -1,0 +1,323 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@implements IAsyncDisposable
+@inject HttpClient Http
+@inject IJSRuntime JSR
+@inject IAuthService AuthService
+
+<div class="chat-widget-container">
+    @if (!isOpen)
+    {
+        <button class="btn btn-primary chat-bubble shadow-lg" @onclick="ToggleChat">
+            <i class="bx bx-message-rounded-dots bx-md"></i>
+            @if (unreadCount > 0)
+            {
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    @unreadCount
+                </span>
+            }
+        </button>
+    }
+    else
+    {
+        <div class="card chat-window shadow-lg border-0 d-flex flex-column">
+            <div class="card-header bg-primary text-white p-3 d-flex justify-content-between align-items-center cursor-pointer" @onclick="ToggleChat">
+                <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-2 bg-white rounded-circle p-1" style="width: 40px; height: 40px;">
+                        <img src="@PartnerAvatar" alt="Avatar" class="w-100 h-100 rounded-circle object-fit-cover" onerror="this.src='/assets/img/default-admin.png'" />
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-white fw-bold">@PartnerName</h6>
+                        <small class="text-white-50" style="font-size: 0.7rem;">
+                            @(isConnected ? "Luôn trực tuyến" : "Đang kết nối...")
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseChat" @onclick:stopPropagation="true"></button>
+            </div>
+
+            <div class="card-body chat-body p-3 overflow-auto" id="chat-scroll-area" @ref="chatScrollRef">
+                @if (isLoadingHistory)
+                {
+                    <div class="text-center mt-3"><div class="spinner-border text-primary spinner-border-sm"></div></div>
+                }
+                else if (!messages.Any())
+                {
+                    <div class="text-center text-muted small mt-3">Hãy gửi tin nhắn để bắt đầu cuộc trò chuyện.</div>
+                }
+                else
+                {
+                    @foreach (var msg in messages)
+                    {
+                        // Giả định đây là Widget của Khách hàng, nên isMine = false khi msg.IsAdmin = true
+                        bool isMine = !msg.IsAdmin;
+
+                        <div class="d-flex mb-3 @(isMine ? "justify-content-end" : "justify-content-start")">
+
+                            @if (!isMine)
+                            {
+                                <img src="@PartnerAvatar" class="rounded-circle me-2 align-self-end shadow-sm" style="width: 28px; height: 28px; object-fit: cover;" onerror="this.src='/assets/img/default-admin.png'" />
+                            }
+
+                            <div class="msg-bubble @(isMine ? "bg-primary text-white" : "bg-light text-dark") p-2 rounded-3 shadow-sm" style="max-width: 75%;">
+                                @if (!isMine)
+                                {
+                                    <small class="d-block fw-bold mb-1 opacity-75" style="font-size: 0.7rem;">@PartnerName</small>
+                                }
+                                <span style="font-size: 0.9rem;">@msg.Content</span>
+                                <div class="text-end" style="font-size:0.65rem; margin-top:4px;">
+                                    <small class="@(isMine ? "text-white-50" : "text-muted")">@msg.CreatedAt.ToLocalTime().ToString("HH:mm")</small>
+                                </div>
+                            </div>
+
+                            @if (isMine)
+                            {
+                                <img src="@MyAvatar" class="rounded-circle ms-2 align-self-end shadow-sm" style="width: 28px; height: 28px; object-fit: cover;" onerror="this.src='/assets/img/default-user.png'" />
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="card-footer p-2 bg-white border-top">
+                <div class="input-group input-group-merge">
+                    <input type="text" class="form-control border-0 shadow-none bg-light rounded-pill px-3"
+                           placeholder="Nhập tin nhắn..."
+                           @bind="messageInput"
+                           @bind:event="oninput"
+                           @onkeyup="HandleKeyUp"
+                           disabled="@(!isConnected)" />
+                    <button class="btn btn-primary rounded-circle ms-2 d-flex align-items-center justify-content-center shadow-sm"
+                            style="width: 40px; height: 40px;"
+                            @onclick="Send"
+                            disabled="@(!isConnected || string.IsNullOrWhiteSpace(messageInput))">
+                        <i class="bx bx-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* CSS định vị Widget cố định ở góc dưới cùng bên phải */
+    .chat-widget-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050; /* Đảm bảo nổi trên các UI khác */
+    }
+
+    .chat-bubble {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .chat-window {
+        width: 350px;
+        height: 500px;
+        border-radius: 12px;
+        overflow: hidden;
+        /* Animation trượt lên mượt mà */
+        animation: slideUp 0.3s ease-out forwards;
+    }
+
+    .chat-body {
+        background-color: #f8f9fa;
+        scroll-behavior: smooth;
+    }
+
+        /* Tùy chỉnh thanh cuộn cho gọn */
+        .chat-body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .chat-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-body::-webkit-scrollbar-thumb {
+            background: #ced4da;
+            border-radius: 10px;
+        }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    [Parameter] public string PartnerName { get; set; } = "CSKH Bookstore";
+    [Parameter] public string PartnerAvatar { get; set; } = "/assets/img/admin-avatar.png";
+    [Parameter] public string MyAvatar { get; set; } = "/assets/img/default-user.png";
+
+    private bool isOpen = false;
+    private int unreadCount = 0;
+    private bool isLoadingHistory = false;
+
+    private HubConnection? hubConnection;
+    private ElementReference chatScrollRef;
+    private bool isConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    private List<MessageResponse> messages = new();
+    private string? messageInput;
+
+    // ID phòng chat của khách hàng hiện tại
+    private int currentConversationId = 0;
+
+    private class MessageResponse
+    {
+        public int Id { get; set; }
+        public int ConversationId { get; set; }
+        public int SenderId { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public bool IsAdmin { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo SignalR
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7259/chathub", options =>
+            {
+                options.AccessTokenProvider = async () => await AuthService.GetAccessTokenAsync();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<object>("ReceiveMessage", (payload) =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(payload);
+                var msg = JsonSerializer.Deserialize<MessageResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (msg != null && msg.ConversationId == currentConversationId)
+                {
+                    messages.Add(msg);
+
+                    if (!isOpen)
+                    {
+                        unreadCount++;
+                    }
+
+                    InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        if (isOpen)
+                        {
+                            await Task.Delay(50);
+                            await ScrollToBottom();
+                        }
+                    });
+                }
+            }
+            catch { }
+        });
+
+        // Bắt đầu kết nối, sau đó gọi API lấy ID phòng chat của khách hàng này
+        await hubConnection.StartAsync();
+        await InitializeConversation();
+    }
+
+    private async Task InitializeConversation()
+    {
+        try
+        {
+            // API này do bạn định nghĩa, ví dụ: lấy phòng chat đang mở của User hiện tại, nếu chưa có thì tạo mới
+            var convId = await Http.GetFromJsonAsync<int>("api/chat/customer/my-conversation");
+            if (convId > 0)
+            {
+                currentConversationId = convId;
+                if (isConnected)
+                {
+                    await hubConnection.SendAsync("JoinConversation", currentConversationId);
+                }
+            }
+        }
+        catch { }
+    }
+
+    private async Task ToggleChat()
+    {
+        isOpen = !isOpen;
+        if (isOpen)
+        {
+            unreadCount = 0; // Xóa thông báo khi mở chat
+            if (!messages.Any() && currentConversationId > 0)
+            {
+                await LoadChatHistory();
+            }
+
+            // Đảm bảo cuộn xuống cuối khi vừa bật form lên
+            _ = InvokeAsync(async () =>
+            {
+                StateHasChanged();
+                await Task.Delay(100);
+                await ScrollToBottom();
+            });
+        }
+    }
+
+    private void CloseChat()
+    {
+        isOpen = false;
+    }
+
+    private async Task LoadChatHistory()
+    {
+        isLoadingHistory = true;
+        try
+        {
+            var history = await Http.GetFromJsonAsync<List<MessageResponse>>($"api/chat/{currentConversationId}/messages");
+            if (history != null)
+            {
+                messages = history;
+            }
+        }
+        catch { }
+        isLoadingHistory = false;
+    }
+
+    private async Task Send()
+    {
+        if (!isConnected || string.IsNullOrWhiteSpace(messageInput) || currentConversationId == 0) return;
+
+        // Tạm lưu nội dung để hiển thị ngay, Backend sẽ phản hồi lại qua ReceiveMessage sau
+        await hubConnection.SendAsync("SendMessage", currentConversationId, messageInput.Trim(), "Text");
+        messageInput = string.Empty;
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Send();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            // Yêu cầu bạn phải có hàm JS này ở file index.html / _Host.cshtml
+            await JSR.InvokeVoidAsync("blazorHelpers.scrollToBottom", chatScrollRef);
+        }
+        catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            if (currentConversationId > 0 && isConnected)
+            {
+                await hubConnection.SendAsync("LeaveConversation", currentConversationId);
+            }
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

@@ -13,6 +13,16 @@ namespace Bookstore.Shared.Helpers
                             .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author != null ? src.Author.Name : "Đang cập nhật"))
                             .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
                                 src.BookFormats.Any() ? src.BookFormats.Min(f => f.Price) : 0));
+
+            CreateMap<Book, BookAdminDto>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.CoverImageUrl))
+                .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author != null ? src.Author.Name : "Đang cập nhật"))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
+                    src.BookFormats.Any() ? src.BookFormats.Min(f => f.Price) : 0))
+                .ForMember(dest => dest.Stock, opt => opt.MapFrom(src =>
+                    src.BookFormats.Any() ? src.BookFormats.Sum(f => f.Stock) : 0))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.CreatedAt));
+
             CreateMap<Review, ReviewBookDto>();
             CreateMap<Author, AuthorDto>().ForMember(dest => dest.Books, opt => opt.MapFrom(src => src.Books)); ;
             CreateMap<Category, CategoryDto>();
@@ -25,7 +35,10 @@ namespace Bookstore.Shared.Helpers
                             .ForMember(dest => dest.OriginalPrice, opt => opt.MapFrom(src => src.SnapshotUnitPrice));
 
             CreateMap<Order, OrderDto>()
-                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems))
+                .ForMember(dest => dest.ReceiverName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+                .ForMember(dest => dest.ShippingAddress, opt => opt.MapFrom(src => src.ShippingAddress));
 
             CreateMap<User, UserInfoDto>();
             CreateMap<RegisterRequest, User>()

@@ -1,0 +1,326 @@
+﻿
+<div class="modal-backdrop fade show"></div>
+
+<!-- Modal -->
+<div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+
+            <!-- HEADER -->
+            <div class="modal-header border-bottom">
+                <div>
+                    <h5 class="modal-title mb-0 fw-semibold">
+                        @(BookId == null ? "✨ Thêm sản phẩm mới" : $"✏️ Cập nhật sản phẩm")
+                    </h5>
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        aria-label="Close"
+                        @onclick="OnClose">
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body bg-light">
+
+                @if (isLoading)
+                {
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="spinner-border text-primary mb-3"></div>
+                        <div class="text-muted">Đang tải dữ liệu...</div>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="bookModel" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="row g-4">
+                            @* --- CỘT TRÁI: THÔNG TIN CƠ BẢN --- *@
+                            <div class="col-lg-7 border-end">
+                                <h6 class="fw-bold mb-3 text-muted">THÔNG TIN CƠ BẢN</h6>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Tên sách <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="bookModel.Title" placeholder="Nhập tên sách..." />
+                                    <ValidationMessage For="@(() => bookModel.Title)" class="text-danger small" />
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Tên Tác giả <span class="text-danger">*</span></label>
+                                        <InputText class="form-control" @bind-Value="bookModel.AuthorName" placeholder="Tên tác giả..." />
+                                        <ValidationMessage For="@(() => bookModel.AuthorName)" class="text-danger small" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Nhà xuất bản</label>
+                                        <InputText class="form-control" @bind-Value="bookModel.Publisher" placeholder="Nhà xuất bản..." />
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">URL Ảnh bìa</label>
+                                    <InputText class="form-control" @bind-Value="bookModel.CoverImageUrl" placeholder="https://..." />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Mô tả nội dung</label>
+                                    <InputTextArea class="form-control" @bind-Value="bookModel.Description" rows="4" placeholder="Giới thiệu sơ lược về sách..." />
+                                </div>
+                            </div>
+
+                            @* --- CỘT PHẢI: THỂ LOẠI & ĐỊNH DẠNG SÁCH --- *@
+                            <div class="col-lg-5">
+
+                                @* 1. Quản lý Thể loại (Categories) *@
+                                <h6 class="fw-bold mb-3 text-muted">THỂ LOẠI</h6>
+                                <div class="mb-4">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control" placeholder="Thêm thể loại..."
+                                               @bind="categoryInput" @onkeyup="HandleCategoryInput" />
+                                        <button type="button" class="btn btn-outline-primary" @onclick="AddCategory">
+                                            <i class="bx bx-plus"></i> Thêm
+                                        </button>
+                                    </div>
+                                    <ValidationMessage For="@(() => bookModel.CategoryNames)" class="text-danger small d-block mb-2" />
+
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @if (bookModel.CategoryNames.Count == 0)
+                                        {
+                                            <span class="text-muted small fst-italic">Chưa có thể loại nào.</span>
+                                        }
+                                        @foreach (var cat in bookModel.CategoryNames)
+                                        {
+                                            <span class="badge bg-label-info d-flex align-items-center p-2">
+                                                @cat
+                                                <i class="bx bx-x ms-2" style="cursor:pointer;" @onclick="() => RemoveCategory(cat)"></i>
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <hr class="text-muted opacity-25 my-4" />
+
+                                @* 2. Quản lý Định dạng & Tồn kho (Formats) *@
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold m-0 text-muted">ĐỊNH DẠNG & KHO</h6>
+                                    <button type="button" class="btn btn-sm btn-success" @onclick="AddFormat">
+                                        <i class="bx bx-plus"></i> Thêm định dạng
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => bookModel.Formats)" class="text-danger small d-block mb-3" />
+
+                                @if (bookModel.Formats.Count == 0)
+                                {
+                                    <div class="alert alert-warning small py-2">Bạn cần thêm ít nhất 1 định dạng cho sách.</div>
+                                }
+
+                                <div class="list-group">
+                                    @foreach (var format in bookModel.Formats)
+                                    {
+                                        <div class="list-group-item bg-light border">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <strong>Cấu hình bản in</strong>
+                                                <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => RemoveFormat(format)">
+                                                    <i class="bx bx-trash"></i> Xóa
+                                                </button>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <label class="form-label small">Định dạng</label>
+                                                    <InputSelect class="form-select form-select-sm" @bind-Value="format.Format">
+                                                        <option value="0">-- Chọn định dạng --</option>
+                                                        <option value="1">Sách mới</option>
+                                                        <option value="2">Sách cũ</option>
+                                                    </InputSelect>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small">Giá bán (VNĐ)</label>
+                                                    <InputNumber class="form-control form-control-sm" @bind-Value="format.Price" />
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small">Tồn kho</label>
+                                                    <InputNumber class="form-control form-control-sm" @bind-Value="format.Stock" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bx bx-save me-1"></i> Lưu Sách
+                            </button>
+                        </div>
+                    </EditForm>
+
+                }
+            </div>
+
+    </div>
+</div>
+</div>
+
+
+
+
+@code {
+    [Parameter]
+    public int? BookId { get; set; } // Nếu truyền vào Id, nó sẽ hiểu là chế độ Cập nhật
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+    [Parameter]
+    public EventCallback OnClose { get; set; } // Gọi sự kiện khi lưu thành công để trang cha Reload
+
+    private CreateBookDto bookModel = new();
+    private bool isLoading = false;
+    private bool isSubmitting = false;
+
+    // Biến phụ trợ cho input Thể loại
+    private string categoryInput = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (BookId.HasValue)
+        {
+            await LoadBookData(BookId.Value);
+        }
+        else
+        {
+            // Nếu tạo mới, tự động cho sẵn 1 định dạng trống
+            bookModel.Formats.Add(new CreateBookFormatDto { Format = 1, Price = 0, Stock = 0 });
+        }
+    }
+
+    private async Task LoadBookData(int id)
+    {
+        isLoading = true;
+        try
+        {
+            // Giả lập lấy dữ liệu sách (Bạn sửa lại theo API trả về BookDto của bạn)
+            var existingBook = await Http.GetFromJsonAsync<BookDto>($"api/books/{id}");
+
+            if (existingBook != null)
+            {
+                bookModel = new CreateBookDto
+                {
+                    Title = existingBook.Title,
+                    Description = existingBook.Description,
+                    Publisher = existingBook.Publisher,
+                    CoverImageUrl = existingBook.ImageUrl,
+                    AuthorName = existingBook.AuthorName ?? "",
+                    // Map danh mục (Nếu API BookDto trả về CategoryNames)
+                    // CategoryNames = existingBook.Categories.Select(c => c.Name).ToList(),
+
+                    // Map các định dạng
+                    // Formats = existingBook.BookFormats.Select(...).ToList()
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSR.InvokeVoidAsync("alert", "Lỗi tải thông tin sách: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // --- LOGIC THỂ LOẠI (CATEGORIES) ---
+    private void HandleCategoryInput(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddCategory();
+        }
+    }
+
+    private void AddCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(categoryInput))
+        {
+            var formattedCat = categoryInput.Trim();
+            if (!bookModel.CategoryNames.Contains(formattedCat))
+            {
+                bookModel.CategoryNames.Add(formattedCat);
+            }
+            categoryInput = string.Empty;
+        }
+    }
+
+    private void RemoveCategory(string category)
+    {
+        bookModel.CategoryNames.Remove(category);
+    }
+
+    // --- LOGIC ĐỊNH DẠNG (FORMATS) ---
+    private void AddFormat()
+    {
+        bookModel.Formats.Add(new CreateBookFormatDto { Format = 1, Price = 0, Stock = 0 });
+    }
+
+    private void RemoveFormat(CreateBookFormatDto format)
+    {
+        bookModel.Formats.Remove(format);
+    }
+
+    // --- LOGIC SUBMIT (TẠO / CẬP NHẬT) ---
+    private async Task HandleSubmit()
+    {
+        // Kiểm tra thủ công dữ liệu danh sách vì Validation DataAnnotations đôi khi không bắt kĩ mảng
+        if (bookModel.CategoryNames.Count == 0)
+        {
+            await JSR.InvokeVoidAsync("alert", "Vui lòng thêm ít nhất 1 thể loại!");
+            return;
+        }
+        if (bookModel.Formats.Count == 0)
+        {
+            await JSR.InvokeVoidAsync("alert", "Vui lòng thêm ít nhất 1 định dạng sách!");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            HttpResponseMessage response;
+
+            if (BookId.HasValue)
+            {
+                response = await Http.PutAsJsonAsync($"api/books/admin/update/{BookId.Value}", bookModel);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/books/admin/create", bookModel);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JSR.InvokeVoidAsync("alert", BookId.HasValue ? "Cập nhật sách thành công!" : "Tạo sách thành công!");
+                await OnSaved.InvokeAsync();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await JSR.InvokeVoidAsync("alert", "Lỗi: " + error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSR.InvokeVoidAsync("alert", "Lỗi hệ thống: " + ex.Message);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -88,6 +88,14 @@ namespace Bookstore.Shared.Services
             return _mapper.Map<IEnumerable<PromotionInfoDTO>>(data);
         }
 
+        public async Task<PromotionInfoDTO?> GetPromotionInfoByIdAsync(int id)
+        {
+            var promotion = await _unitOfWork.Promotions.GetFirstOrDefaultAsync(p => p.Id == id);
+            if (promotion == null) return null;
+            var promoInfo = _mapper.Map<PromotionInfoDTO>(promotion);
+            return promoInfo;
+        }
+
         public async Task<bool> UpdatePromotionAsync(int id, UpdatePromotionRequest request)
         {
             if (request.EndDate <= request.StartDate)
