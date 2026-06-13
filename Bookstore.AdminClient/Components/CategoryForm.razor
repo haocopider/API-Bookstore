@@ -93,8 +93,14 @@
         isSubmitting = false;
 
         if (res.IsSuccessStatusCode)
+        {
+            NotificationService.Success("Lưu thể loại thành công.");
             await OnSaved.InvokeAsync();
+        }
         else
-            await JSR.InvokeVoidAsync("alert", "Có lỗi xảy ra khi lưu dữ liệu!");
+        {
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
+        }
     }
 }

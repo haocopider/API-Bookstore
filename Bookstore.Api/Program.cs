@@ -7,7 +7,6 @@ using Bookstore.Shared.Services;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -33,8 +32,7 @@ builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IStatisticService, StatisticService>();
-//builder.Services.AddHostedService<OrderStatusUpdaterService>();
-builder.Services.AddScoped<FirebaseNotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddAutoMapper(config => config.AddProfile<MappingProfile>());
 
@@ -62,7 +60,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     var path = context.HttpContext.Request.Path;
 
                     if (!string.IsNullOrEmpty(accessToken) &&
-                        path.StartsWithSegments("/chathub"))
+                        path.StartsWithSegments("/chathub") && path.StartsWithSegments("/notificationhub"))
+                        
                     {
                         context.Token = accessToken;
                     }
@@ -110,6 +109,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<ChatHub>("/chathub");
+app.MapHub<NotificationHub>("/notificationhub");
 app.MapControllers();
 
 app.Run();

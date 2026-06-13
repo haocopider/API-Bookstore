@@ -24,54 +24,102 @@
         <ul class="navbar-nav flex-row align-items-center ms-auto">
 
             <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
-                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <a class="nav-link dropdown-toggle hide-arrow position-relative"
+                   href="javascript:void(0);"
+                   data-bs-toggle="dropdown">
+
                     <i class="bx bx-bell bx-sm"></i>
+
+                    @if (UnreadCount > 0)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            @(UnreadCount > 99 ? "99+" : UnreadCount.ToString())
+                        </span>
+                    }
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end py-0">
-                    <li class="dropdown-header border-bottom">
-                        <span class="fw-semibold lh-1 me-auto">Thông báo</span>
+                <ul class="dropdown-menu dropdown-menu-end py-0" style="width: 350px;">
+                    <li class="dropdown-header border-bottom py-3">
+                        <span class="fw-semibold">
+                            Thông báo (@UnreadCount chưa đọc)
+                        </span>
                     </li>
-                    <li>
-                        <div class="dropdown-item d-flex align-items-center justify-content-center p-3">
-                            <span class="text-muted">Không có thông báo mới</span>
-                        </div>
-                    </li>
+
+                    @if (Noti.Any())
+                    {
+                        @foreach (var noti in Noti.OrderByDescending(x => x.CreatedAt))
+                        {
+                            <li>
+                                <a class="dropdown-item py-3"
+                                   href="@($"/orders/{noti.OrderId}")">
+
+                                    <div class="d-flex flex-column">
+
+                                        <div class="d-flex justify-content-between">
+                                            <span class="fw-semibold">
+                                                @noti.Title
+                                            </span>
+
+                                            @if (!noti.IsRead)
+                                            {
+                                                <span class="badge bg-primary">
+                                                    Mới
+                                                </span>
+                                            }
+                                        </div>
+
+                                        <small class="text-muted">
+                                            @noti.Content
+                                        </small>
+
+                                        @if (!string.IsNullOrEmpty(noti.OrderCode))
+                                        {
+                                            <small class="text-info">
+                                                Đơn hàng: @noti.OrderCode
+                                            </small>
+                                        }
+
+                                        <small class="text-muted mt-1">
+                                            @noti.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </div>
+
+                                </a>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li>
+                            <div class="dropdown-item text-center py-3">
+                                Không có thông báo
+                            </div>
+                        </li>
+                    }
                 </ul>
             </li>
 
             <AuthorizeView>
                 <Authorized>
-                    <li class="nav-item navbar-dropdown dropdown-user dropdown">
-                        <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center" href="javascript:void(0);" data-bs-toggle="dropdown">
-                            <div class="avatar avatar-online me-2">
-                                <img src="/assets/img/avatars/1.png" alt="Avatar" class="w-px-40 h-auto rounded-circle" />
-                            </div>
-                            <div class="d-none d-sm-block text-start">
-                                <span class="fw-semibold d-block text-dark" style="line-height: 1.2;">
-                                    @context.User.Identity?.Name
-                                </span>
-                                <small class="text-muted" style="font-size: 0.75rem;">
-                                    @GetRoleName(context.User)
-                                </small>
-                            </div>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="/profile">
-                                    <i class="bx bx-user me-2"></i>
-                                    <span class="align-middle">Hồ sơ của tôi</span>
-                                </a>
-                            </li>
-                            <li>
-                                <div class="dropdown-divider"></div>
-                            </li>
-                            <li>
-                                <a class="dropdown-item text-danger" style="cursor: pointer;" @onclick="Logout">
-                                    <i class="bx bx-power-off me-2"></i>
-                                    <span class="align-middle">Đăng xuất</span>
-                                </a>
-                            </li>
-                        </ul>
+                    <li class="nav-item d-flex align-items-center">
+                        <div class="avatar avatar-online me-2">
+                            <img src="/assets/img/avatars/1.png"
+                                 alt="Avatar"
+                                 class="w-px-40 h-auto rounded-circle" />
+                        </div>
+
+                        <div class="me-3">
+                            <span class="fw-semibold d-block text-dark">
+                                @context.User.Identity?.Name
+                            </span>
+                            <small class="text-muted">
+                                @GetRoleName(context.User)
+                            </small>
+                        </div>
+
+                        <button class="btn btn-outline-danger btn-sm"
+                                @onclick="Logout">
+                            <i class="bx bx-power-off"></i>
+                        </button>
                     </li>
                 </Authorized>
 
@@ -89,7 +137,24 @@
 </nav>
 
 @code {
-    // Hàm phụ trợ để lấy tên Role từ JWT Token / Claims
+    
+    private List<NotiDto> Noti = new();
+    private int UnreadCount => Noti.Count(x => !x.IsRead);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    private async Task LoadNotifications()
+    {
+        var notiDto = await Http.GetFromJsonAsync<List<NotiDto>>("/api/notifications/admin");
+        if (notiDto != null)
+        {
+            Noti = notiDto.OrderByDescending(x => x.CreatedAt).ToList();
+        }
+    }
+
     private string GetRoleName(ClaimsPrincipal user)
     {
         // Kiểm tra claim chuẩn của .NET

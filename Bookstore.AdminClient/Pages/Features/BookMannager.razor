@@ -1,4 +1,5 @@
-﻿
+﻿@page "/products"
+
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-header d-flex align-items-center justify-content-between border-bottom">
         <h5 class="card-title m-0 fw-bold">Quản lý Kho Sách</h5>
@@ -232,6 +233,8 @@
     <BookForm BookId="bookId" OnSaved="HandleBookSaved" OnClose="() => isActiveForm = false" />
 }
 
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
 @code {
     private bool isLoading = true;
     private bool isListView = true;
@@ -250,6 +253,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!(authState.User?.Identity?.IsAuthenticated ?? false))
+        {
+            AllBooks = new List<BookAdminDto>();
+            FilteredBooks = new List<BookAdminDto>();
+            PagedBooks = new List<BookAdminDto>();
+            isLoading = false;
+            NotificationService.Warning("Vui lòng đăng nhập để xem dữ liệu.");
+            return;
+        }
+
         await LoadData();
     }
 

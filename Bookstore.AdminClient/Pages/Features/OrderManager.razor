@@ -1,4 +1,6 @@
-﻿
+﻿@page "/orders"
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-header d-flex align-items-center justify-content-between border-bottom">
         <h5 class="card-title m-0 fw-bold">Quản lý Đơn hàng</h5>
@@ -154,10 +156,10 @@
                 <div class="modal-footer bg-light border-top">
                     @if (selectedOrder.Status == 0)
                     {
-                        <button type="button" class="btn btn-outline-danger me-auto fw-bold" @onclick="() => selectedOrder.Status = 4">
+                        <button type="button" class="btn btn-outline-danger me-auto fw-bold" @onclick='() => UpdateOrderStatus(4)'>
                             <i class="bx bx-x-circle me-1"></i> Hủy đơn
                         </button>
-                        <button type="button" class="btn btn-success fw-bold px-4" @onclick="() => selectedOrder.Status = 1">
+                        <button type="button" class="btn btn-success fw-bold px-4" @onclick='() => UpdateOrderStatus(1)'>
                             <i class="bx bx-check-circle me-1"></i> Xác nhận đơn
                         </button>
                     }
@@ -181,7 +183,19 @@
     private bool isDetailOpen = false;
     private OrderDto? selectedOrder;
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!(authState.User?.Identity?.IsAuthenticated ?? false))
+        {
+            orders = new List<OrderDto>();
+            isLoading = false;
+            NotificationService.Warning("Vui lòng đăng nhập để xem dữ liệu.");
+            return;
+        }
+
+        await LoadData();
+    }
 
     private async Task LoadData()
     {
@@ -197,21 +211,21 @@
         isDetailOpen = true;
     }
 
-    private async Task UpdateOrderStatus()
+    private async Task UpdateOrderStatus(int newStatus)
     {
         if (selectedOrder == null) return;
 
-        var res = await Http.PutAsJsonAsync($"api/orders/admin/{selectedOrder.Id}/status", selectedOrder.Status);
+        var res = await Http.PutAsJsonAsync($"api/orders/admin/{selectedOrder.Id}/status", newStatus);
 
         if (res.IsSuccessStatusCode)
         {
-            await JSR.InvokeVoidAsync("alert", "Đã cập nhật trạng thái!");
+            NotificationService.Success("Đã cập nhật trạng thái!");
             isDetailOpen = false;
             await LoadData();
-        }
+        }   
         else
         {
-            await JSR.InvokeVoidAsync("alert", "Lỗi cập nhật!");
+            NotificationService.Error("Lỗi cập nhật!");
         }
     }
 }

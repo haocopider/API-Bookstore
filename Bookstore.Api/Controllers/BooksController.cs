@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bookstore.Api.Attributes;
 using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Bookstore.Shared.Models;
@@ -73,14 +74,15 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost("review")]
-        public async Task<IActionResult> ReviewBook([FromBody] ReviewBookDto reviewRequest)
+        public async Task<ActionResult<ApiResponse>> ReviewBook([FromBody] ReviewBookDto reviewRequest)
         {
             var success = await _bookService.ReviewBookAsync(reviewRequest);
-            if (!success) return BadRequest(new { Message = "Đánh giá thất bại. Vui lòng thử lại." });
-            return Ok(new { Message = "Đánh giá thành công." });
+            if (!success) return BadRequest(new ApiResponse { Success = false, Message = "Đánh giá thất bại. Vui lòng thử lại." });
+            return Ok(new ApiResponse { Success = true, Message = "Đánh giá thành công." });
         }
 
         [HttpGet("admin")]
+        [HasPermission("RESOUCRES.VIEW")]
         public async Task<IActionResult> GetAllBookForAdmin([FromQuery] BookFilterRequestDto filter)
         {
             var books = await _bookService.GetAllBooksForAdminAsync(filter);
@@ -88,30 +90,30 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost("admin/create")]
-        // [HasPermission("CREATE_BOOK")]
-        public async Task<IActionResult> CreateBook([FromBody] CreateBookDto request)
+        [HasPermission("RESOUCRES.CREATE")]
+        public async Task<ActionResult<ApiResponse>> CreateBook([FromBody] CreateBookDto request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             try
             {
                 var success = await _bookService.CreateBookAsync(request);
                 if (success)
                 {
-                    return Ok(new { Message = "Tạo sách thành công!" });
+                    return Ok(new ApiResponse { Success = true, Message = "Tạo sách thành công!" });
                 }
-                return BadRequest(new { Message = "Có lỗi xảy ra khi lưu sách." });
+                return BadRequest(new ApiResponse { Success = false, Message = "Có lỗi xảy ra khi lưu sách." });
             }
             catch (Exception ex)
             {
                 // Có thể log lỗi ở đây
-                return StatusCode(500, new { Message = "Lỗi hệ thống: " + ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống: " + ex.Message });
             }
         }
 
         [HttpPut("admin/update/{id}")]
-        // [HasPermission("UPDATE_BOOK")]
+        [HasPermission("RESOUCRES.UPDATE")]
         public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto request)
         {
             if (!ModelState.IsValid)
@@ -131,22 +133,22 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost("admin/restock")]
-        // [HasPermission("UPDATE_STOCK")]
-        public async Task<IActionResult> Restock([FromBody] RestockDto request)
+        [HasPermission("RESOUCRES.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> Restock([FromBody] RestockDto request)
         {
             if (request.AddedQuantity <= 0)
-                return BadRequest(new { Message = "Số lượng nhập kho phải lớn hơn 0." });
+                return BadRequest(new ApiResponse { Success = false, Message = "Số lượng nhập kho phải lớn hơn 0." });
 
             try
             {
                 var success = await _bookService.RestockAsync(request);
-                if (success) return Ok(new { Message = "Nhập kho thành công!" });
+                if (success) return Ok(new ApiResponse { Success = true, Message = "Nhập kho thành công!" });
 
-                return NotFound(new { Message = "Không tìm thấy định dạng sách này." });
+                return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy định dạng sách này." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Lỗi hệ thống: " + ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống: " + ex.Message });
             }
         }
     }

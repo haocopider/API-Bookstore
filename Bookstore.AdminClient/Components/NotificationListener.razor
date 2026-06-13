@@ -1,0 +1,64 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@inject IAuthService AuthService
+@inject IJSRuntime JSR
+@implements IAsyncDisposable
+
+@code {
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo kết nối tới NotificationHub
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7259/notificationhub", options =>
+            {
+                options.AccessTokenProvider = async () => await AuthService.GetAccessTokenAsync();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        // ĐĂNG KÝ LẮNG NGHE SỰ KIỆN TỪ SERVER
+        hubConnection.On<JsonElement>("ReceiveSystemNotification", async (payload) =>
+        {
+            // Trích xuất dữ liệu từ JSON sinh động
+            string type = payload.GetProperty("type").GetString() ?? "";
+            string title = payload.GetProperty("title").GetString() ?? "";
+            string message = payload.GetProperty("message").GetString() ?? "";
+
+            // Thực thi hành động hiển thị lên UI Admin
+            await ProcessNotificationNotification(type, title, message);
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task ProcessNotificationNotification(string type, string title, string message)
+    {
+        // Phương án 1: Gọi thư viện Toast có sẵn của dự án để bật Pop-up thông báo góc màn hình
+        // Ví dụ nếu bạn dùng Blazored.Toast: ToastService.ShowInfo(message, title);
+
+        // Phương án 2: Gọi SweetAlert2 hoặc Toast thông qua JS Interop để tạo trải nghiệm thực tế
+        await JSR.InvokeVoidAsync("Swal.fire", new
+        {
+            title = title,
+            text = message,
+            icon = type == "NEW_ORDER" ? "success" : "info",
+            toast = true,
+            position = "top-end",
+            timer = 4000,
+            showConfirmButton = false
+        });
+
+        // TÙY CHỌN THỰC TẾ: Phát ra một tiếng "Ting" nhẹ để cảnh báo nhân viên khi họ đang mở tab khác
+        await JSR.InvokeVoidAsync("blazorHelpers.playNotificationSound");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

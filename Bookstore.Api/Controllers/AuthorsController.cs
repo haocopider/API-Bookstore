@@ -1,4 +1,5 @@
-﻿using Bookstore.Shared.Dtos;
+﻿using Bookstore.Api.Attributes;
+using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -39,30 +40,30 @@ namespace Bookstore.Api.Controllers
             return Ok(authors);
         }
 
-        // [HasPermission("MANAGE_CATALOG")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateAuthorDto request)
+        [HasPermission("RESOUCRES.CREATE")]
+        public async Task<ActionResult<ApiResponse>> Create([FromBody] CreateAuthorDto request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             await _authorService.CreateAuthorAsync(request);
-            return Ok(new { message = "Thêm tác giả thành công." });
+            return Ok(new ApiResponse { Success = true, Message = "Thêm tác giả thành công." });
         }
 
-        // [HasPermission("MANAGE_CATALOG")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateAuthorDto request)
+        [HasPermission("RESOUCRES.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> Update(int id, [FromBody] UpdateAuthorDto request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             var success = await _authorService.UpdateAuthorAsync(id, request);
-            if (!success) return NotFound(new { message = "Không tìm thấy tác giả để cập nhật." });
+            if (!success) return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy tác giả để cập nhật." });
 
-            return Ok(new { message = "Cập nhật tác giả thành công." });
+            return Ok(new ApiResponse { Success = true, Message = "Cập nhật tác giả thành công." });
         }
 
-        // [HasPermission("MANAGE_CATALOG")]
         [HttpDelete("{id}")]
+        [HasPermission("RESOUCRES.DELETE")]
         public async Task<IActionResult> Delete(int id)
         {
             var success = await _authorService.DeleteAuthorAsync(id);

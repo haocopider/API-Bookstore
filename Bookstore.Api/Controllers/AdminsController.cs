@@ -7,7 +7,6 @@ namespace Bookstore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[HasPermission("MANAGE_HR")]
     public class AdminsController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -17,7 +16,6 @@ namespace Bookstore.Api.Controllers
             _adminService = adminService;
         }
 
-        // --- ENDPOINTS QUẢN LÝ NHÂN VIÊN (ADMIN) ---
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginAdminRequest request)
         {
@@ -28,6 +26,7 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpGet("staff")]
+        [HasPermission("STAFF.VIEW")]
         public async Task<IActionResult> GetAllStaff()
         {
             var staffList = await _adminService.GetAllAdminsAsync();
@@ -35,6 +34,7 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpGet("staff/{id}")]
+        [HasPermission("STAFF.VIEW")]
         public async Task<IActionResult> GetStaffById(int id)
         {
             var staff = await _adminService.GetAdminByIdAsync(id);
@@ -43,39 +43,42 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost("staff")]
-        public async Task<IActionResult> CreateStaff([FromBody] CreateAdminRequest request)
+        [HasPermission("STAFF.CREATE")]
+        public async Task<ActionResult<ApiResponse>> CreateStaff([FromBody] CreateAdminRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             try
             {
                 await _adminService.CreateAdminAsync(request);
-                return Ok(new { message = "Thêm mới nhân viên thành công!" });
+                return Ok(new ApiResponse { Success = true, Message = "Thêm mới nhân viên thành công!" });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống", Data = ex.Message });
             }
         }
 
         [HttpPut("staff/{id}")]
-        public async Task<IActionResult> UpdateStaff(int id, [FromBody] UpdateAdminRequest request)
+        [HasPermission("STAFF.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> UpdateStaff(int id, [FromBody] UpdateAdminRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             var success = await _adminService.UpdateAdminAsync(id, request);
-            if (!success) return NotFound(new { message = "Không tìm thấy tài khoản nhân viên cần sửa." });
+            if (!success) return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy tài khoản nhân viên cần sửa." });
 
-            return Ok(new { message = "Cập nhật tài khoản nhân viên thành công!" });
+            return Ok(new ApiResponse { Success = true, Message = "Cập nhật tài khoản nhân viên thành công!" });
         }
 
         // --- ENDPOINTS QUẢN LÝ VAI TRÒ & PHÂN QUYỀN (ROLE/PERMISSION) ---
 
         [HttpGet("roles")]
+        [HasPermission("ROLE.VIEW")]
         public async Task<IActionResult> GetRoles()
         {
             var roles = await _adminService.GetRolesAsync();
@@ -83,31 +86,34 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost("roles")]
-        public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
+        [HasPermission("ROLE.CREATE")]
+        public async Task<ActionResult<ApiResponse>> CreateRole([FromBody] CreateRoleRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             try
             {
                 await _adminService.CreateRoleAsync(request);
-                return Ok(new { message = "Tạo vai trò thành công!" });
+                return Ok(new ApiResponse { Success = true, Message = "Tạo vai trò thành công!" });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
         }
 
         [HttpPut("roles/{id}/permissions")]
-        public async Task<IActionResult> AssignPermissions(int id, [FromBody] List<int> permissionIds)
+        [HasPermission("ROLE.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> AssignPermissions(int id, [FromBody] List<int> permissionIds)
         {
             var success = await _adminService.UpdateRolePermissionsAsync(id, permissionIds);
-            if (!success) return NotFound(new { message = "Không tìm thấy vai trò cấu hình." });
+            if (!success) return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy vai trò cấu hình." });
 
-            return Ok(new { message = "Cập nhật và cấp quyền cho vai trò thành công!" });
+            return Ok(new ApiResponse { Success = true, Message = "Cập nhật và cấp quyền cho vai trò thành công!" });
         }
 
         [HttpGet("permissions")]
+        [HasPermission("PERM.VIEW")]
         public async Task<IActionResult> GetAllPermissions()
         {
             var permissions = await _adminService.GetAllPermissionsAsync();

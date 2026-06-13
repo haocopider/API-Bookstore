@@ -30,8 +30,8 @@ namespace Bookstore.Shared.Dtos
     {
         public int Id { get; set; }
         public int CustomerId { get; set; }
-        public int StaffId { get; set; }
-        public int? Status { get; set; } // 0: Đang mở, 1: Đã đóng
+        public string? CustomerName { get; set; }
+        public int? Status { get; set; } 
         public DateTime? CreatedAt { get; set; }
         public DateTime? LastMessageAt { get; set; }
         public MessageDto? LastMessage { get; set; }

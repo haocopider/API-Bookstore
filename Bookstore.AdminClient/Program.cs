@@ -20,16 +20,28 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
 
-// Auth service and HTTP handler
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddScoped<NotificationService>();
+
 builder.Services.AddTransient<AuthHeaderHandler>();
+
+builder.Services.AddScoped<ApiErrorHandler>();
+
 builder.Services.AddApexCharts();
 
 var apiBase = builder.Configuration["api:baseUrl"];
 builder.Services.AddHttpClient("API", client =>
 {
     client.BaseAddress = new Uri(apiBase);
-}).AddHttpMessageHandler<AuthHeaderHandler>(); ;
+}).AddHttpMessageHandler<AuthHeaderHandler>()
+.AddHttpMessageHandler<ApiErrorHandler>();
+
+builder.Services.AddScoped(
+    sp => sp.GetRequiredService<IHttpClientFactory>()
+            .CreateClient("API"));
+
+
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("API"));
 

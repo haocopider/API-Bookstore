@@ -140,37 +140,48 @@
 
     private async Task HandleSubmit()
     {
-        // Validation thủ công cho Dropdown
-        if ((StaffId == null && createModel.RoleId == 0) || (StaffId != null && updateModel.RoleId == 0))
+        if ((StaffId == null && createModel.RoleId == 0) ||
+            (StaffId != null && updateModel.RoleId == 0))
         {
-            await JSR.InvokeVoidAsync("alert", "Vui lòng chọn vai trò cho nhân viên!");
+            NotificationService.Warning(
+                "Vui lòng chọn vai trò cho nhân viên!");
+
             return;
         }
 
         isSubmitting = true;
+
         HttpResponseMessage res;
 
         if (StaffId.HasValue)
         {
-            // API Cập nhật
-            res = await Http.PutAsJsonAsync($"api/admins/staff/{StaffId.Value}", updateModel);
+            res = await Http.PutAsJsonAsync(
+                $"api/admins/staff/{StaffId.Value}",
+                updateModel);
         }
         else
         {
-            // API Tạo mới
-            res = await Http.PostAsJsonAsync("api/admins/staff", createModel);
+            res = await Http.PostAsJsonAsync(
+                "api/admins/staff",
+                createModel);
         }
 
         isSubmitting = false;
 
         if (res.IsSuccessStatusCode)
         {
+            NotificationService.Success(
+                StaffId.HasValue
+                    ? "Cập nhật nhân viên thành công"
+                    : "Thêm nhân viên thành công");
+
             await OnSaved.InvokeAsync();
         }
         else
         {
-            var error = await res.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Lỗi: " + error);
+            var error = await res.Content.ReadFromJsonAsync<ApiResponse>();
+
+            NotificationService.Error(error?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 }

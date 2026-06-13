@@ -31,6 +31,8 @@ public partial class User
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();

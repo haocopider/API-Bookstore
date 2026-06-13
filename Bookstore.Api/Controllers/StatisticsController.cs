@@ -7,7 +7,6 @@ namespace Bookstore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[HasPermission("VIEW_REPORTS")]
     public class StatisticsController : ControllerBase
     {
         private readonly IStatisticService _statisticService;

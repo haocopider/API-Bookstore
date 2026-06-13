@@ -1,4 +1,5 @@
-﻿using Bookstore.Shared.Dtos;
+﻿using Bookstore.Api.Attributes;
+using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -86,56 +87,55 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPut("{id}/cancel")]
-        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderRequest request)
+        public async Task<ActionResult<ApiResponse>> CancelOrder(int id, [FromBody] CancelOrderRequest request)
         {
             try
             {
                 int userId = GetCurrentUserId();
                 await _orderService.CancelOrderAsync(userId, id, request.Reason);
 
-                return Ok(new { message = "Đã hủy đơn hàng thành công." });
+                return Ok(new ApiResponse { Success = true, Message = "Đã hủy đơn hàng thành công." });
             }
             catch (KeyNotFoundException ex) 
             {
-                return NotFound(new { message = ex.Message });
+                return NotFound(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (InvalidOperationException ex) 
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", error = ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống.", Data = ex.Message });
             }
         }
 
         [HttpPut("{id}/complete")]
-        public async Task<IActionResult> CompleteOrder(int id)
+        public async Task<ActionResult<ApiResponse>> CompleteOrder(int id)
         {
             try
             {
                 int userId = GetCurrentUserId();
                 await _orderService.CompleteOrderAsync(userId, id);
 
-                return Ok(new { message = "Cảm ơn bạn đã xác nhận nhận hàng!" });
+                return Ok(new ApiResponse { Success = true, Message = "Cảm ơn bạn đã xác nhận nhận hàng!" });
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(new { message = ex.Message });
+                return NotFound(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (InvalidOperationException ex) 
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", error = ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống.", Data = ex.Message });
             }
         }
 
         [HttpGet("admin")]
-        // [Authorize] 
-        // [HasPermission("MANAGE_ORDERS")] // Khuyến nghị mở khóa Attribute này sau khi cấu hình Roles
+        [HasPermission("RESOUCRES.VIEW")]
         public async Task<IActionResult> GetAllOrdersForAdmin([FromQuery] int? status)
         {
             var orders = await _orderService.GetAllOrdersForAdminAsync(status);
@@ -143,9 +143,8 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPut("admin/{id}/status")]
-        // [Authorize]
-        // [HasPermission("MANAGE_ORDERS")]
-        public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] int newStatus)
+        [HasPermission("RESOUCRES.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> UpdateOrderStatus(int id, [FromBody] int newStatus)
         {
             // Trạng thái hợp lệ từ 0 đến 4
             if (newStatus < 0 || newStatus > 4)
@@ -156,13 +155,13 @@ namespace Bookstore.Api.Controllers
                 var success = await _orderService.UpdateOrderStatusByAdminAsync(id, newStatus);
 
                 if (!success)
-                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
+                    return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy đơn hàng." });
 
-                return Ok(new { message = "Cập nhật trạng thái đơn hàng thành công." });
+                return Ok(new ApiResponse { Success = true, Message = "Cập nhật trạng thái đơn hàng thành công." });
             }
             catch (System.Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống: " + ex.Message });
             }
         }
     }

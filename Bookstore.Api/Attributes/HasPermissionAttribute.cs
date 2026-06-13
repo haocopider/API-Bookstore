@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Bookstore.Shared.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -9,7 +10,6 @@ namespace Bookstore.Api.Attributes
     {
         private readonly string _permission;
 
-        // Truyền vào mã quyền cần thiết (VD: "CREATE_BOOK")
         public HasPermissionAttribute(string permission)
         {
             _permission = permission;
@@ -19,20 +19,29 @@ namespace Bookstore.Api.Attributes
         {
             var user = context.HttpContext.User;
 
-            // Kiểm tra xem User đã đăng nhập chưa (Token có hợp lệ không)
-            if (!user.Identity?.IsAuthenticated ?? true)
+            if (user?.Identity?.IsAuthenticated != true)
             {
-                context.Result = new UnauthorizedResult(); // 401 Unauthorized
+                context.Result = new UnauthorizedResult();
                 return;
             }
 
-            // Tìm tất cả các Claim có type là "Permission" trong JWT Token
-            var userPermissions = user.FindAll("Permission").Select(c => c.Value).ToList();
+            var permissions = user
+                .FindFirst("permissions")?
+                .Value
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim());
 
-            // Nếu user không có quyền được yêu cầu, chặn truy cập
-            if (!userPermissions.Contains(_permission))
+            if (permissions == null ||
+                !permissions.Any(p => p.Equals(_permission, StringComparison.OrdinalIgnoreCase)))
             {
-                context.Result = new ForbidResult(); // 403 Forbidden
+                context.Result = new JsonResult(new ApiResponse
+                {
+                    Success = false,
+                    Message = $"Bạn không có quyền {_permission}"
+                })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
             }
         }
     }

@@ -24,6 +24,7 @@ namespace Bookstore.Shared.Repositories
         public IRepository<Admin> Admins { get; private set; }
         public IRepository<Message> Messages { get; private set; }
         public IRepository<Conversation> Conversations { get; private set; }
+        public IRepository<Notification> Notifications { get; private set; }
 
         public UnitOfWork(AppDbContext context)
         {
@@ -43,6 +44,7 @@ namespace Bookstore.Shared.Repositories
             Admins = new Repository<Admin>(_context);
             Messages = new Repository<Message>(_context);
             Conversations = new Repository<Conversation>(_context);
+            Notifications = new Repository<Notification>(_context);
         }
 
         public void Dispose()

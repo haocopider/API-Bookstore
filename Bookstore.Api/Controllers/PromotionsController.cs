@@ -1,4 +1,5 @@
-﻿using Bookstore.Shared.Dtos;
+﻿using Bookstore.Api.Attributes;
+using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -47,48 +48,51 @@ namespace Bookstore.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePromotion([FromBody] CreatePromotionRequest request)
+        [HasPermission("RESOUCRES.CREATE")]
+        public async Task<ActionResult<ApiResponse>> CreatePromotion([FromBody] CreatePromotionRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             try
             {
                 await _promotionService.CreatePromotionAsync(request);
-                return Ok(new { message = "Tạo chương trình khuyến mãi thành công!" });
+                return Ok(new ApiResponse { Success = true, Message = "Tạo chương trình khuyến mãi thành công!" });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống", Data = ex.Message });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePromotion(int id, [FromBody] UpdatePromotionRequest request)
+        [HasPermission("RESOUCRES.UPDATE")]
+        public async Task<ActionResult<ApiResponse>> UpdatePromotion(int id, [FromBody] UpdatePromotionRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(new ApiResponse { Success = false, Message = "Dữ liệu không hợp lệ.", Data = ModelState });
 
             try
             {
                 var success = await _promotionService.UpdatePromotionAsync(id, request);
-                if (!success) return NotFound(new { message = "Không tìm thấy chương trình khuyến mãi." });
+                if (!success) return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy chương trình khuyến mãi." });
 
-                return Ok(new { message = "Cập nhật khuyến mãi thành công!" });
+                return Ok(new ApiResponse { Success = true, Message = "Cập nhật khuyến mãi thành công!" });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống", Data = ex.Message });
             }
         }
 
         [HttpDelete("{id}")]
+        [HasPermission("RESOUCRES.DELETE")]
         public async Task<IActionResult> DeletePromotion(int id)
         {
             try

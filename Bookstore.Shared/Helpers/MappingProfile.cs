@@ -45,6 +45,8 @@ namespace Bookstore.Shared.Helpers
                 .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
             CreateMap<Promotion, PromotionInfoDTO>()
                 .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.Banner));
+            CreateMap<Notification, NotiDto>()
+                .ForMember(dest => dest.OrderCode, opt => opt.MapFrom(src => src.Order != null ? src.Order.OrderCode : null));
         }
     }
 }

@@ -158,8 +158,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading data: {ex.Message}");
-            await JSR.InvokeVoidAsync("alert", "Lỗi tải dữ liệu. Vui lòng thử lại!");
+            NotificationService.Error("Lỗi tải dữ liệu: " + ex.Message);
         }
         finally
         {
@@ -208,15 +207,16 @@
 
         if (res.IsSuccessStatusCode)
         {
+            NotificationService.Success("Lưu chương trình khuyến mãi thành công!");
             await OnSaved.InvokeAsync();
         }
         else
         {
-            await JSR.InvokeVoidAsync("alert", "Lỗi lưu dữ liệu!");
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 
-    // --- CÁC CLASS HỖ TRỢ ---
 
     public class PromoViewModel
     {
@@ -237,8 +237,6 @@
         public int[] CategoryIds { get; set; } = Array.Empty<int>();
     }
 
-    // DTO tạm thời dùng để map danh sách lấy từ API.
-    // Nếu bạn đã có sẵn DTO trong thư mục Models, hãy xóa 2 class này đi và dùng DTO của bạn.
     public class CategoryLookupDto
     {
         public int Id { get; set; }

@@ -19,6 +19,7 @@ namespace Bookstore.Shared.Interfaces
         IRepository<Admin> Admins { get; }
         IRepository<Message> Messages { get; }
         IRepository<Conversation> Conversations { get; }
+        IRepository<Notification> Notifications { get; }
         Task<int> CommitAsync();
     }
 }

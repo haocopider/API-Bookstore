@@ -27,6 +27,7 @@ namespace Bookstore.Shared.Dtos
         [Required(ErrorMessage = "Vui lòng nhập Mật khẩu")]
         public string Password { get; set; } = string.Empty;
     }
+
     public class LoginAdminRequest
     {
         [Required(ErrorMessage = "Vui lòng nhập Tên đăng nhập")]
@@ -35,6 +36,7 @@ namespace Bookstore.Shared.Dtos
         [Required(ErrorMessage = "Vui lòng nhập Mật khẩu")]
         public string Password { get; set; } = string.Empty;
     }
+
     public class AdminResponseDto
     {
         public bool IsSuccess { get; set; }

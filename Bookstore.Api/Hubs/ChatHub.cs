@@ -1,4 +1,5 @@
-﻿using Bookstore.Shared.Interfaces;
+﻿using Bookstore.Api.Attributes;
+using Bookstore.Shared.Interfaces;
 using Bookstore.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -10,10 +11,12 @@ namespace Bookstore.Api.Hubs
     public class ChatHub : Hub
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IHubContext<NotificationHub> _notificationHubContext;
 
-        public ChatHub(IUnitOfWork unitOfWork)
+        public ChatHub(IUnitOfWork unitOfWork, IHubContext<NotificationHub> notificationHubContext)
         {
             _unitOfWork = unitOfWork;
+            _notificationHubContext = notificationHubContext;
         }
 
         public async Task LeaveConversation(int conversationId)
@@ -46,11 +49,10 @@ namespace Bookstore.Api.Hubs
 
             // Kiểm tra xem User hiện tại có phải là Admin/Staff không
             // (Bao gồm Role = ADMIN, STAFF hoặc RoleId = 3)
-            bool isStaff = roleClaim.ToUpper() == "ADMIN"
+            bool isStaff = roleClaim.ToUpper() == "MANAGER"
                         || roleClaim.ToUpper() == "STAFF"
                         || roleIdClaim == "3";
 
-            // Nếu KHÔNG PHẢI là Admin/Staff, VÀ cũng KHÔNG PHẢI chủ phòng chat -> Báo lỗi cấm
             if (!isStaff && conversation.CustomerId != userId)
             {
                 throw new HubException("Forbidden");
@@ -120,9 +122,22 @@ namespace Bookstore.Api.Hubs
                 messageType = message.MessageType
             };
 
+
+            if (isStaff == false)
+            {
+                await _notificationHubContext.Clients.Group("Admins").SendAsync("ReceiveSystemNotification", new
+                {
+                    Type = "NEW_MESSAGE",
+                    Title = "💬 Tin nhắn hỗ trợ mới!",
+                    Message = $"Phòng chat #{conversationId} vừa nhận được một tin nhắn mới từ khách hàng.",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
             await Clients
                 .Group(conversationId.ToString())
                 .SendAsync("ReceiveMessage", response);
+
         }
     }
 }

@@ -6,6 +6,8 @@
 @inject IJSRuntime JSR
 @inject IAuthService AuthService
 
+@page "/chat"
+
 <div class="container-fluid chat-app-container py-3">
     <div class="row h-100 bg-white shadow-sm rounded-4 overflow-hidden border">
 
@@ -219,6 +221,7 @@
         )
         .OrderBy(c => c.Status)
         .ThenByDescending(c => c.Id);
+
     private class ConversationDto
     {
         public int Id { get; set; }

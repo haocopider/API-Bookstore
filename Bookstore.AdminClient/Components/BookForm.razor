@@ -174,18 +174,17 @@
 
 @code {
     [Parameter]
-    public int? BookId { get; set; } // Nếu truyền vào Id, nó sẽ hiểu là chế độ Cập nhật
+    public int? BookId { get; set; }
 
     [Parameter]
     public EventCallback OnSaved { get; set; }
     [Parameter]
-    public EventCallback OnClose { get; set; } // Gọi sự kiện khi lưu thành công để trang cha Reload
+    public EventCallback OnClose { get; set; } 
 
     private CreateBookDto bookModel = new();
     private bool isLoading = false;
     private bool isSubmitting = false;
 
-    // Biến phụ trợ cho input Thể loại
     private string categoryInput = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -196,7 +195,6 @@
         }
         else
         {
-            // Nếu tạo mới, tự động cho sẵn 1 định dạng trống
             bookModel.Formats.Add(new CreateBookFormatDto { Format = 1, Price = 0, Stock = 0 });
         }
     }
@@ -228,7 +226,7 @@
         }
         catch (Exception ex)
         {
-            await JSR.InvokeVoidAsync("alert", "Lỗi tải thông tin sách: " + ex.Message);
+            NotificationService.Error("Lỗi tải thông tin sách: " + ex.Message);
         }
         finally
         {
@@ -274,18 +272,16 @@
         bookModel.Formats.Remove(format);
     }
 
-    // --- LOGIC SUBMIT (TẠO / CẬP NHẬT) ---
     private async Task HandleSubmit()
     {
-        // Kiểm tra thủ công dữ liệu danh sách vì Validation DataAnnotations đôi khi không bắt kĩ mảng
         if (bookModel.CategoryNames.Count == 0)
         {
-            await JSR.InvokeVoidAsync("alert", "Vui lòng thêm ít nhất 1 thể loại!");
+            NotificationService.Error("Vui lòng thêm ít nhất 1 thể loại!");
             return;
         }
         if (bookModel.Formats.Count == 0)
         {
-            await JSR.InvokeVoidAsync("alert", "Vui lòng thêm ít nhất 1 định dạng sách!");
+            NotificationService.Error("Vui lòng thêm ít nhất 1 định dạng sách!");
             return;
         }
 
@@ -305,18 +301,18 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await JSR.InvokeVoidAsync("alert", BookId.HasValue ? "Cập nhật sách thành công!" : "Tạo sách thành công!");
+                NotificationService.Success(BookId.HasValue ? "Cập nhật sách thành công!" : "Tạo sách thành công!");
                 await OnSaved.InvokeAsync();
             }
             else
             {
-                var error = await response.Content.ReadAsStringAsync();
-                await JSR.InvokeVoidAsync("alert", "Lỗi: " + error);
+                var err = await response.Content.ReadFromJsonAsync<ApiResponse>();
+                NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
             }
         }
         catch (Exception ex)
         {
-            await JSR.InvokeVoidAsync("alert", "Lỗi hệ thống: " + ex.Message);
+            NotificationService.Error("Có lỗi xảy ra: " + ex.Message);
         }
         finally
         {

@@ -10,7 +10,7 @@
                 <div class="text-center">
                     <img src="https://static.vecteezy.com/system/resources/previews/013/077/069/large_2x/open-book-logo-design-template-open-book-illustration-vector.jpg" class="img-fluid mb-3" style="max-height: 200px;" alt="Logo" />
                     <h4 class="fw-bold text-primary">Chào mừng trở lại!</h4>
-                    <p class="text-dark">Đăng nhập để tiếp tục quản lý cửa hàng và mua sắm.</p>
+                    <p class="text-dark">Đăng nhập để tiếp tục quản lý cửa hàng.</p>
                 </div>
             </div>
 
@@ -101,16 +101,37 @@
         try
         {
             var success = await AuthService.Login(loginModel);
-            if(!success)
+            if (!success)
             {
                 errorMessage = "Kiểm tra thông tin đăng nhập, hoặc tài khoản bạn đã bị khóa";
+                NotificationService.Error(errorMessage);
                 return;
-            };
-            Navigation.NavigateTo("/");
+            }
+
+            NotificationService.Success("Đăng nhập thành công.");
+
+            try
+            {
+                var uri = new Uri(Navigation.Uri);
+                var query = QueryHelpers.ParseQuery(uri.Query);
+                if (query.TryGetValue("returnUrl", out var returnUrl) && !string.IsNullOrWhiteSpace(returnUrl))
+                {
+                    Navigation.NavigateTo(returnUrl);
+                }
+                else
+                {
+                    Navigation.NavigateTo("/");
+                }
+            }
+            catch
+            {
+                Navigation.NavigateTo("/");
+            }
         }
         catch (Exception ex)
         {
             errorMessage = "Đăng nhập thất bại: " + ex.Message;
+            NotificationService.Error(errorMessage);
         }
         finally
         {

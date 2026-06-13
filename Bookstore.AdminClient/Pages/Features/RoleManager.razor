@@ -1,4 +1,4 @@
-﻿
+﻿@page "/roles"
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-header bg-white pt-3 pb-2 border-bottom">
         <ul class="nav nav-pills" id="pills-tab" role="tablist">
@@ -274,6 +274,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!(authState.User?.Identity?.IsAuthenticated ?? false))
+        {
+            Roles = new List<RoleWithPermissionsDto>();
+            AllPermissions = new List<PermissionDto>();
+            GroupedPermissions = new Dictionary<string, List<PermissionDto>>();
+            IsLoading = false;
+            NotificationService.Warning("Vui lòng đăng nhập để xem dữ liệu.");
+            return;
+        }
+
         await LoadData();
     }
 
@@ -296,7 +307,7 @@
         }
         catch (Exception ex)
         {
-            await JSR.InvokeVoidAsync("alert", "Lỗi tải dữ liệu: " + ex.Message);
+            NotificationService.Error("Lỗi tải dữ liệu: " + ex.Message);
         }
         finally
         {
@@ -371,12 +382,12 @@
 
         if (response.IsSuccessStatusCode)
         {
-            await JSR.InvokeVoidAsync("alert", "Đã cập nhật quyền thành công!");
+            NotificationService.Success("Cập nhật quyền cho vai trò thành công!");
         }
         else
         {
-            var err = await response.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Có lỗi xảy ra: " + err);
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
         IsSaving = false;
     }
@@ -397,12 +408,12 @@
         {
             showRoleModal = false;
             await LoadData();
-            await JSR.InvokeVoidAsync("alert", "Tạo vai trò thành công");
+            NotificationService.Success("Đã tạo vai trò mới thành công!");
         }
         else
         {
-            var err = await res.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 
@@ -419,8 +430,8 @@
         }
         else
         {
-            var err = await res.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Không thể xóa: " + err);
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 
@@ -464,8 +475,8 @@
         }
         else
         {
-            var err = await res.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 
@@ -481,8 +492,8 @@
         }
         else
         {
-            var err = await res.Content.ReadAsStringAsync();
-            await JSR.InvokeVoidAsync("alert", "Lỗi: " + err);
+            var err = await res.Content.ReadFromJsonAsync<ApiResponse>();
+            NotificationService.Error(err?.Message ?? "Đã xảy ra lỗi.");
         }
     }
 }

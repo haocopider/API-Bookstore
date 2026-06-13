@@ -10,9 +10,9 @@ namespace Bookstore.Shared.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly FirebaseNotificationService _notification;
+        private readonly INotificationService _notification;
 
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, FirebaseNotificationService notification)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notification)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -257,7 +257,8 @@ namespace Bookstore.Shared.Services
             order.Status = newStatus;
 
             _unitOfWork.Orders.Update(order);
-            await _unitOfWork.CommitAsync();
+
+
 
             // === GỬI THÔNG BÁO CHO KHÁCH HÀNG ===
             if (user != null && !string.IsNullOrEmpty(user.FcmToken))
@@ -271,13 +272,23 @@ namespace Bookstore.Shared.Services
                     _ => "đang được xử lý"
                 };
 
-                string title = "Cập nhật đơn hàng";
-                string body = $"Đơn hàng #{order.OrderCode} của bạn {statusText}.";
+                var noti = new Notification
+                {
+                    UserId = user.Id,
+                    Title = "Cập nhật đơn hàng",
+                    Content = $"Đơn hàng #{order.OrderCode} {statusText}.",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false,
+                    OrderId = order.Id
+                };
+
+                await _unitOfWork.Notifications.AddAsync(noti);
 
                 // Chạy ngầm việc gửi thông báo để không làm chậm API
-                _ = _notification.SendNotificationAsync(user.FcmToken, title, body);
+                _ = _notification.SendNotificationAsync(user.FcmToken, noti.Title, noti.Content);
             }
 
+            await _unitOfWork.CommitAsync();
             return true;
         }
     }

@@ -1,4 +1,7 @@
-﻿<div class="card mb-4 shadow-sm border-0">
+﻿@page "/authors"
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="card mb-4 shadow-sm border-0">
     <div class="card-header d-flex align-items-center justify-content-between border-bottom">
         <h5 class="card-title m-0 fw-bold">Quản lý Tác giả</h5>
         <button class="btn btn-primary" @onclick="OpenCreateForm">
@@ -68,7 +71,19 @@
     private bool isFormOpen = false;
     private int? selectedAuthorId;
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!(authState.User?.Identity?.IsAuthenticated ?? false))
+        {
+            authors = new List<AuthorDto>();
+            isLoading = false;
+            NotificationService.Warning("Vui lòng đăng nhập để xem dữ liệu.");
+            return;
+        }
+
+        await LoadData();
+    }
 
     private async Task LoadData()
     {

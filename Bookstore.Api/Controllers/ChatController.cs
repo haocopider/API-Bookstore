@@ -1,4 +1,5 @@
-﻿using Bookstore.Shared.Dtos;
+﻿using Bookstore.Api.Attributes;
+using Bookstore.Shared.Dtos;
 using Bookstore.Shared.Interfaces;
 using Bookstore.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,6 @@ namespace Bookstore.Api.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        // 1. Khách hàng gọi hàm này để lấy/tạo phiên chat hiện tại với cửa hàng
         [HttpGet("my-conversation")]
         public async Task<IActionResult> GetOrCreateMyConversation()
         {
@@ -46,14 +46,12 @@ namespace Bookstore.Api.Controllers
             {
                 Id = activeConv.Id,
                 CustomerId = activeConv.CustomerId,
-                StaffId = activeConv.StaffId,
                 Status = activeConv.Status,
                 CreatedAt = activeConv.CreatedAt,
                 LastMessageAt = activeConv.LastMessageAt
             });
         }
 
-        // 2. Tải lịch sử tin nhắn của một đoạn chat
         [HttpGet("{conversationId}/messages")]
         public async Task<IActionResult> GetMessages(int conversationId)
         {
@@ -95,9 +93,8 @@ namespace Bookstore.Api.Controllers
             return Ok(result);
         }
 
-        // 3. Dành cho Admin: Lấy danh sách tất cả các Conversation đang mở
         [HttpGet("admin/active-conversations")]
-        // [HasPermission("CUSTOMER_CARE")] // Có thể mở comment khi tích hợp phân quyền
+        [HasPermission("RESOUCRES.VIEW")]
         public async Task<IActionResult> GetActiveConversations()
         {
             // Cần nạp cả thông tin Customer để hiển thị tên
@@ -110,7 +107,7 @@ namespace Bookstore.Api.Controllers
             {
                 Id = c.Id,
                 CustomerId = c.CustomerId,
-                StaffId = c.StaffId,
+                CustomerName = c.Customer?.FullName ?? "Unknown",
                 Status = c.Status,
                 CreatedAt = c.CreatedAt
             });
