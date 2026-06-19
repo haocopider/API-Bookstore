@@ -1,6 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
-@inject NavigationManager Navigation
 
 <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
      style="position: sticky; top: 0; z-index: 1000; width: 100%; border-bottom: 1px solid #d9dee3;"
@@ -22,7 +21,13 @@
 
     <div class="navbar-nav-right d-flex align-items-center ms-auto" id="navbar-collapse">
         <ul class="navbar-nav flex-row align-items-center ms-auto">
-
+            <li>
+                <div class="ms-3 d-none d-md-block">
+                    <button class="btn btn-sm btn-outline-light" title="Audit logs" @onclick='() => Navigation.NavigateTo("/audit-logs")'>
+                        <i class="bx bx-history"></i> Audit logs
+                    </button>
+                </div>
+            </li>
             <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
                 <a class="nav-link dropdown-toggle hide-arrow position-relative"
                    href="javascript:void(0);"
@@ -38,10 +43,17 @@
                     }
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end py-0" style="width: 350px;">
-                    <li class="dropdown-header border-bottom py-3">
-                        <span class="fw-semibold">
-                            Thông báo (@UnreadCount chưa đọc)
-                        </span>
+                    <li class="dropdown-header border-bottom py-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-semibold">
+                                Thông báo (@UnreadCount chưa đọc)
+                            </span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" title="Làm mới" @onclick="async () => await LoadNotifications()">
+                                <i class="bx bx-refresh"></i>
+                            </button>
+                        </div>
                     </li>
 
                     @if (Noti.Any())
@@ -50,7 +62,7 @@
                         {
                             <li>
                                 <a class="dropdown-item py-3"
-                                   href="@($"/orders/{noti.OrderId}")">
+                                   @onclick="() => OpenOrderForm(noti.OrderId)">
 
                                     <div class="d-flex flex-column">
 
@@ -136,10 +148,18 @@
     </div>
 </nav>
 
+@if (isFormOpen)
+{
+    <OrderForm OrderId="@selectedOrderId" OnClose="CloseForm" OnSaved="ReloadData" />
+}
+
 @code {
-    
+
     private List<NotiDto> Noti = new();
     private int UnreadCount => Noti.Count(x => !x.IsRead);
+
+    private bool isFormOpen = false;
+    private int? selectedOrderId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -173,4 +193,19 @@
         AuthService.Logout();
         Navigation.NavigateTo("/login", forceLoad: true);
     }
+
+    private void OpenOrderForm(int? orderId)
+    {
+        if (!orderId.HasValue) return;
+        selectedOrderId = orderId.Value;
+        isFormOpen = true;
+        StateHasChanged();
+    }
+
+    private void CloseForm()
+    {
+        isFormOpen = false;
+    }
+
+    private async Task ReloadData() { isFormOpen = false; await LoadNotifications(); }
 }

@@ -18,6 +18,42 @@ namespace Bookstore.Shared.Services
             _promotionService = promotionService;
         }
 
+        public async Task<BookAdminDto> GetBookAdminByIdAsync(int id)
+        {
+            var books = await _unitOfWork.Books.FindAsync(
+                b => b.Id == id,
+                b => b.Author,
+                b => b.BookFormats,
+                b => b.Categories
+            );
+
+            var book = books.FirstOrDefault();
+            if (book == null) return null;
+
+            var dto = _mapper.Map<BookAdminDto>(book);
+
+            // Populate UpdatedBy from the latest audit log for this book
+            try
+            {
+                var audits = await _unitOfWork.AuditLogs.FindAsync(a => a.TableName == "Books" && a.RecordId == book.Id.ToString(), a => a.Admin);
+                var last = audits.OrderByDescending(a => a.CreatedAt).FirstOrDefault();
+                if (last != null)
+                {
+                    if (last.Admin != null)
+                    {
+                        var name = $"{last.Admin.FirstName} {last.Admin.LastName}".Trim();
+                        dto.UpdatedBy = string.IsNullOrWhiteSpace(name) ? last.Admin.UserName : name;
+                    }
+                }
+            }
+            catch
+            {
+                // swallow any audit lookup errors to avoid breaking book retrieval
+            }
+
+            return dto;
+        }
+
         public async Task<IEnumerable<BookDto>> GetAllBooksAsync()
         {
             var booksFromDb = await _unitOfWork.Books.GetAllAsync(
@@ -251,13 +287,45 @@ namespace Bookstore.Shared.Services
                 IsDeleted = false,
                 Author = author, // Gán Author (có thể là cũ hoặc mới)
                 Categories = categories, // Gán list Categories (cũ hoặc mới)
-                BookFormats = request.Formats.Select(f => new BookFormat
-                {
-                    Type = f.Format,
-                    Price = f.Price,
-                    Stock = f.Stock
-                }).ToList()
+                BookFormats = new List<BookFormat>()
             };
+
+            // Ensure we have two formats: 0 = new, 1 = used
+            var formatsMap = request.Formats.GroupBy(f => f.Format).ToDictionary(g => g.Key, g => g.First());
+
+            // add new format (type 0)
+            if (formatsMap.ContainsKey(0))
+            {
+                var f = formatsMap[0];
+                book.BookFormats.Add(new BookFormat { Type = 0, Price = f.Price, Stock = f.Stock });
+            }
+            else if (formatsMap.ContainsKey(1))
+            {
+                // if only provided used format, still create new with default
+                book.BookFormats.Add(new BookFormat { Type = 0, Price = 0, Stock = 0 });
+            }
+            else
+            {
+                // fallback: create default new format
+                book.BookFormats.Add(new BookFormat { Type = 0, Price = 0, Stock = 0 });
+            }
+
+            // add used format (type 1)
+            if (formatsMap.ContainsKey(1))
+            {
+                var f = formatsMap[1];
+                book.BookFormats.Add(new BookFormat { Type = 1, Price = f.Price, Stock = f.Stock });
+            }
+            else if (formatsMap.ContainsKey(0))
+            {
+                // if only provided new format, still create used with default
+                book.BookFormats.Add(new BookFormat { Type = 1, Price = 0, Stock = 0 });
+            }
+            else
+            {
+                // fallback: create default used format
+                book.BookFormats.Add(new BookFormat { Type = 1, Price = 0, Stock = 0 });
+            }
 
             // 4. Lưu vào Database
             await _unitOfWork.Books.AddAsync(book);
@@ -272,7 +340,8 @@ namespace Bookstore.Shared.Services
             var books = await _unitOfWork.Books.FindAsync(
                 b => b.Id == id,
                 b => b.Author,
-                b => b.Categories
+                b => b.Categories,
+                b => b.BookFormats
             );
             var book = books.FirstOrDefault();
 
@@ -302,6 +371,74 @@ namespace Bookstore.Shared.Services
                 book.Categories.Add(category);
             }
 
+            // 4. Xử lý các định dạng (Formats): thêm mới / cập nhật / xóa
+            var existingFormats = book.BookFormats.ToList();
+            var requestFormats = request.Formats ?? new List<CreateBookFormatDto>();
+
+            var matchedExistingIds = new HashSet<int>();
+
+            foreach (var rf in requestFormats)
+            {
+                BookFormat? target = null;
+
+                if (rf.Id.HasValue && rf.Id.Value > 0)
+                {
+                    target = existingFormats.FirstOrDefault(f => f.Id == rf.Id.Value);
+                }
+
+                if (target == null)
+                {
+                    // try match by Type
+                    target = existingFormats.FirstOrDefault(f => f.Type == rf.Format);
+                }
+
+                if (target != null)
+                {
+                    // update existing
+                    target.Price = rf.Price;
+                    target.Stock = rf.Stock;
+                    target.Type = rf.Format;
+                    _unitOfWork.BookFormats.Update(target);
+                    matchedExistingIds.Add(target.Id);
+                }
+                else
+                {
+                    // create new format
+                    var nf = new BookFormat
+                    {
+                        Book = book,
+                        Type = rf.Format,
+                        Price = rf.Price,
+                        Stock = rf.Stock
+                    };
+                    await _unitOfWork.BookFormats.AddAsync(nf);
+                    book.BookFormats.Add(nf);
+                }
+            }
+
+            // remove existing formats that are not present in request
+            var toRemove = existingFormats.Where(f => !matchedExistingIds.Contains(f.Id)).ToList();
+            foreach (var rem in toRemove)
+            {
+                // detach from book navigation
+                book.BookFormats.Remove(rem);
+                _unitOfWork.BookFormats.Remove(rem);
+            }
+
+            _unitOfWork.Books.Update(book);
+            await _unitOfWork.CommitAsync();
+
+            return true;
+        }
+
+        public async Task<bool> DeleteBookAsync(int id)
+        {
+            var books = await _unitOfWork.Books.FindAsync(b => b.Id == id);
+            var book = books.FirstOrDefault();
+            if (book == null || book.IsDeleted == true)
+                return false;
+
+            book.IsDeleted = true;
             _unitOfWork.Books.Update(book);
             await _unitOfWork.CommitAsync();
 
@@ -346,6 +483,22 @@ namespace Bookstore.Shared.Services
 
             foreach (var book in bookDto)
             {
+                // get last audit for this book to determine UpdatedBy
+                try
+                {
+                    var audits = await _unitOfWork.AuditLogs.FindAsync(a => a.TableName == "Books" && a.RecordId == book.Id.ToString(), a => a.Admin);
+                    var last = audits.OrderByDescending(a => a.CreatedAt).FirstOrDefault();
+                    if (last != null && last.Admin != null)
+                    {
+                        var name = $"{last.Admin.FirstName} {last.Admin.LastName}".Trim();
+                        book.UpdatedBy = string.IsNullOrWhiteSpace(name) ? last.Admin.UserName : name;
+                    }
+                }
+                catch
+                {
+                    // ignore audit lookup errors
+                }
+
                 var promotion = await _promotionService.GetBestPromotionForBookAsync(book.Id, book.Price);
                 if (promotion != null)
                 {

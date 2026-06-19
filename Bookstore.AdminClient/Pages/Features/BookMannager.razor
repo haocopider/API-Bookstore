@@ -167,17 +167,21 @@
                                                 }
                                             </td>
                                             <td>
-                                                @if (book.UpdatedAt.HasValue)
-                                                {
-                                                    <div class="d-flex flex-column small">
-                                                        <span class="text-dark mb-1"><i class="bx bx-time-five me-1"></i>@book.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
-                                                        <span class="text-muted"><i class="bx bx-user me-1"></i>@(book.UpdatedBy ?? "Hệ thống")</span>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        @if (book.UpdatedAt.HasValue)
+                                                        {
+                                                            <div class="d-flex flex-column small">
+                                                                <span class="text-dark mb-1"><i class="bx bx-time-five me-1"></i>@book.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                                                <span class="text-muted"><i class="bx bx-user me-1"></i>@(book.UpdatedBy ?? "Hệ thống")</span>
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted small fst-italic">Chưa cập nhật</span>
+                                                        }
                                                     </div>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted small fst-italic">Chưa cập nhật</span>
-                                                }
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -230,10 +234,11 @@
 @* GỌI MODAL FORM KHI ACTIVE *@
 @if (isActiveForm)
 {
-    <BookForm BookId="bookId" OnSaved="HandleBookSaved" OnClose="() => isActiveForm = false" />
+    <BookForm BookId="bookId" SelectedBook="SelectedBook" OnSaved="HandleBookSaved" OnClose="() => isActiveForm = false" />
 }
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JsRuntime
 
 @code {
     private bool isLoading = true;
@@ -244,6 +249,7 @@
     private List<BookAdminDto> AllBooks = new();
     private List<BookAdminDto> FilteredBooks = new();
     private List<BookAdminDto> PagedBooks = new();
+    private BookAdminDto? SelectedBook = null;
 
     private BookFilterRequestDto Filter = new();
 
@@ -341,12 +347,14 @@
     private void CreateNewBook()
     {
         bookId = null;
+        SelectedBook = null;
         isActiveForm = true;
     }
 
     private void EditBook(int id)
     {
         bookId = id;
+        SelectedBook = AllBooks.FirstOrDefault(b => b.Id == id);
         isActiveForm = true;
     }
 
@@ -354,5 +362,30 @@
     {
         isActiveForm = false;
         await LoadData();
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        if (!await JSR.InvokeAsync<bool>("confirm", $"Bạn có chắc muốn xóa sách #{id} không?"))
+            return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/books/admin/delete/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                NotificationService.Success("Xóa sách thành công.");
+                await LoadData();
+            }
+            else
+            {
+                var err = await response.Content.ReadFromJsonAsync<ApiResponse>();
+                NotificationService.Error(err?.Message ?? "Không thể xóa sách.");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Error("Lỗi khi xóa sách: " + ex.Message);
+        }
     }
 }

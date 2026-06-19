@@ -119,5 +119,41 @@ namespace Bookstore.Api.Controllers
             var permissions = await _adminService.GetAllPermissionsAsync();
             return Ok(permissions);
         }
+
+        // --- Audit logs endpoints ---
+        [HttpGet("audit-logs/recent")]
+        public async Task<IActionResult> GetRecentLogs([FromQuery] int take = 50)
+        {
+            var logs = await _adminService.GetRecentLogsAsync(take);
+            return Ok(logs);
+        }
+
+        [HttpPost("audit-logs/{id}/undo")]
+        public async Task<ActionResult<ApiResponse>> UndoAction(int id)
+        {
+            try
+            {
+                // Try to get current admin id from token (sub claim) or NameIdentifier
+                int currentAdminId = 1;
+                var sub = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+                var nameId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (!string.IsNullOrEmpty(sub) && int.TryParse(sub, out var sid)) currentAdminId = sid;
+                else if (!string.IsNullOrEmpty(nameId) && int.TryParse(nameId, out var nid)) currentAdminId = nid;
+
+                var success = await _adminService.UndoActionAsync(id, currentAdminId);
+                if (!success) return BadRequest(new ApiResponse { Success = false, Message = "Không thể hoàn tác hành động." });
+
+                return Ok(new ApiResponse { Success = true, Message = "Hoàn tác hành động thành công." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống khi hoàn tác.", Data = ex.Message });
+            }
+        }
     }
 }

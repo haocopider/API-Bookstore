@@ -31,8 +31,8 @@ namespace Bookstore.Shared.Services
 
             // 2. Lấy tất cả đơn hàng từ mốc thời gian trên đến hiện tại (Kèm OrderItems)
             var recentOrders = await _unitOfWork.Orders.FindAsync(
-                o => o.OrderDate >= queryStartDate
-                /* && o.Status == 3 */, // Mở comment nếu chỉ tính đơn thành công
+                o => o.OrderDate >= queryStartDate,
+                //&& o.Status == 3, 
                 o => o.OrderItems
             );
 
@@ -122,7 +122,9 @@ namespace Bookstore.Shared.Services
         public async Task<RevenueSummaryDto> GetRevenueSummaryAsync(DateTime startDate, DateTime endDate)
         {
             var orders = await _unitOfWork.Orders.FindAsync(
-                o => o.OrderDate >= startDate && o.OrderDate <= endDate
+                o => 
+                     o.OrderDate >= startDate && 
+                     o.OrderDate <= endDate 
             );
 
             return new RevenueSummaryDto

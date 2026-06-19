@@ -156,7 +156,7 @@ namespace Bookstore.Shared.Services
         {
             var order = await _unitOfWork.Orders.GetFirstOrDefaultAsync(
                 filter: o => o.Id == orderId && o.UserId == userId,
-                includes: o => o.OrderItems
+                includes: [ o => o.OrderItems, o => o.User ]
             );
 
             if (order == null) throw new KeyNotFoundException("Không tìm thấy đơn hàng.");

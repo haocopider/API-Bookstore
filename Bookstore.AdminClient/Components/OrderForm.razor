@@ -1,0 +1,144 @@
+﻿<div class="modal-backdrop fade show"></div>
+<div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+
+            @if (isLoading)
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                    <div class="spinner-border text-info mb-3"></div>
+                    <div class="text-muted">Đang tải dữ liệu...</div>
+                </div>
+            }
+            else
+            {
+                    <div class="modal-header border-bottom bg-light">
+                        <h5 class="modal-title fw-bold">Chi tiết Đơn hàng: <span class="text-primary">#@orderDto.OrderCode</span></h5>
+                    <button type="button" class="btn-close" @onclick="OnClose"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div class="card border-0 shadow-sm bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bx bx-user-pin me-2"></i>Thông tin nhận hàng</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <span class="text-muted small d-block">Người nhận</span>
+                                        <span class="fw-semibold fs-6">@orderDto.ReceiverName</span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="text-muted small d-block">Số điện thoại</span>
+                                        <span class="fw-semibold fs-6">@orderDto.PhoneNumber</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <span class="text-muted small d-block">Địa chỉ giao hàng</span>
+                                        <span class="fw-semibold">@orderDto.ShippingAddress</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary mb-3"><i class="bx bx-box me-2"></i>Sản phẩm đã đặt (@orderDto.TotalItems)</h6>
+                        <div class="table-responsive mb-4 border rounded shadow-sm">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th scope="col" style="width: 15%">Hình ảnh</th>
+                                        <th scope="col" class="text-start" style="width: 35%">Tên sản phẩm</th>
+                                        <th scope="col">Đơn giá</th>
+                                        <th scope="col">Số lượng</th>
+                                        <th scope="col" class="text-end pe-3">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in orderDto.Items)
+                                    {
+                                        <tr>
+                                            <td class="text-center py-2">
+                                                <img src="@item.ImageUrl" alt="@item.BookTitle" class="img-thumbnail rounded shadow-sm" style="width: 60px; height: 80px; object-fit: cover;" onerror="this.src='/assets/img/default-book.png'" />
+                                            </td>
+                                            <td class="text-start fw-semibold">@item.BookTitle</td>
+                                            <td class="text-center">@item.UnitPrice.ToString("N0")đ</td>
+                                            <td class="text-center fw-bold text-primary">x @item.Quantity</td>
+                                            <td class="text-end fw-bold text-dark pe-3">@((item.UnitPrice * item.Quantity).ToString("N0"))đ</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end mb-2">
+                            <div class="bg-light p-3 rounded shadow-sm border" style="min-width: 300px;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-muted text-uppercase">Tổng thành tiền:</span>
+                                    <span class="fw-bold text-danger fs-5">@orderDto.TotalAmount.ToString("N0")đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light border-top">
+                        @if (orderDto.Status == 0)
+                        {
+                            <button type="button" class="btn btn-outline-danger me-auto fw-bold" @onclick='() => UpdateOrderStatus(4)'>
+                                <i class="bx bx-x-circle me-1"></i> Hủy đơn
+                            </button>
+                            <button type="button" class="btn btn-success fw-bold px-4" @onclick='() => UpdateOrderStatus(1)'>
+                                <i class="bx bx-check-circle me-1"></i> Xác nhận đơn
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="me-auto text-muted fst-italic">
+                                Đơn hàng đã được xử lý
+                            </div>
+                        }
+
+                    <button type="button" class="btn btn-secondary" @onclick="OnClose">Đóng</button>
+                    </div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter] public int? OrderId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private OrderDto orderDto = new();
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OrderId.HasValue)
+        {
+            isLoading = true;
+            var existing = await Http.GetFromJsonAsync<OrderDto>($"api/orders/{OrderId.Value}");
+            if (existing != null)
+            {
+                orderDto = existing;
+            }
+            isLoading = false;
+        }
+    }
+
+
+    private async Task UpdateOrderStatus(int newStatus)
+    {
+        if (orderDto == null) return;
+
+        var res = await Http.PutAsJsonAsync($"api/orders/admin/{orderDto.Id}/status", newStatus);
+
+        if (res.IsSuccessStatusCode)
+        {
+            NotificationService.Success("Đã cập nhật trạng thái!");
+            await OnSaved.InvokeAsync();
+        }
+        else
+        {
+            NotificationService.Error("Lỗi cập nhật!");
+        }
+    }
+}

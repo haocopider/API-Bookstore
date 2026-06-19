@@ -1,5 +1,7 @@
 ﻿using Bookstore.Shared.Interfaces;
 using Bookstore.Shared.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,6 +11,8 @@ namespace Bookstore.Shared.Repositories
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
+
+        private IDbContextTransaction _currentTransaction;
         public IRepository<Book> Books { get; private set; }
         public IRepository<BookFormat> BookFormats { get; private set; }
         public IRepository<Order> Orders { get; private set; }
@@ -25,6 +29,7 @@ namespace Bookstore.Shared.Repositories
         public IRepository<Message> Messages { get; private set; }
         public IRepository<Conversation> Conversations { get; private set; }
         public IRepository<Notification> Notifications { get; private set; }
+        public IRepository<AuditLog> AuditLogs { get; private set; }
 
         public UnitOfWork(AppDbContext context)
         {
@@ -45,16 +50,75 @@ namespace Bookstore.Shared.Repositories
             Messages = new Repository<Message>(_context);
             Conversations = new Repository<Conversation>(_context);
             Notifications = new Repository<Notification>(_context);
+            AuditLogs = new Repository<AuditLog>(_context);
         }
 
-        public void Dispose()
+        //public async Task<int> CommitAsync()
+        //{
+        //    return await _context.SaveChangesAsync();
+        //}
+
+        public async Task ExecuteSqlRawAsync(string sql, params object[] parameters)
         {
-            _context.Dispose();
+            await _context.Database.ExecuteSqlRawAsync(sql, parameters);
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            if (_currentTransaction != null)
+            {
+                throw new InvalidOperationException("Một Transaction khác đang được thực thi.");
+            }
+
+            _currentTransaction = await _context.Database.BeginTransactionAsync();
+        }
+
+        public async Task RollbackAsync()
+        {
+            try
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.RollbackAsync();
+                }
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
+            }
         }
 
         public async Task<int> CommitAsync()
         {
-            return await _context.SaveChangesAsync();
+            try
+            {
+                int result = await _context.SaveChangesAsync();
+
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.CommitAsync();
+                }
+
+                return result;
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            _currentTransaction?.Dispose();
+            _context.Dispose();
         }
     }
 }

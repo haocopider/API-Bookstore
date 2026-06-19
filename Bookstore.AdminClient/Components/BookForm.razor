@@ -85,6 +85,15 @@
                                     </div>
                                     <ValidationMessage For="@(() => bookModel.CategoryNames)" class="text-danger small d-block mb-2" />
 
+                                    <div class="mb-2">
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="categoryInput" @onchange="OnCategorySelectChanged">
+                                            <option value="">-- Chọn thể loại --</option>
+                                            @foreach (var c in AvailableCategories)
+                                            {
+                                                <option value="@c.Name">@c.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
                                     <div class="d-flex flex-wrap gap-2 mt-2">
                                         @if (bookModel.CategoryNames.Count == 0)
                                         {
@@ -130,9 +139,8 @@
                                                 <div class="col-12">
                                                     <label class="form-label small">Định dạng</label>
                                                     <InputSelect class="form-select form-select-sm" @bind-Value="format.Format">
-                                                        <option value="0">-- Chọn định dạng --</option>
-                                                        <option value="1">Sách mới</option>
-                                                        <option value="2">Sách cũ</option>
+                                                        <option value="0">Sách mới</option>
+                                                        <option value="1">Sách cũ</option>
                                                     </InputSelect>
                                                 </div>
                                                 <div class="col-6">
@@ -175,6 +183,8 @@
 @code {
     [Parameter]
     public int? BookId { get; set; }
+    [Parameter]
+    public BookAdminDto? SelectedBook { get; set; }
 
     [Parameter]
     public EventCallback OnSaved { get; set; }
@@ -186,16 +196,51 @@
     private bool isSubmitting = false;
 
     private string categoryInput = string.Empty;
+    private List<CategoryDto> AvailableCategories = new();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCategories();
+
         if (BookId.HasValue)
         {
             await LoadBookData(BookId.Value);
         }
         else
         {
-            bookModel.Formats.Add(new CreateBookFormatDto { Format = 1, Price = 0, Stock = 0 });
+            // Initialize two formats: 0 = new, 1 = used
+            if (SelectedBook != null)
+            {
+                // If parent passed SelectedBook, use it
+                bookModel = new CreateBookDto
+                {
+                    Title = SelectedBook.Title,
+                    Description = SelectedBook.Description,
+                    Publisher = SelectedBook.Publisher,
+                    CoverImageUrl = SelectedBook.ImageUrl,
+                    AuthorName = SelectedBook.AuthorName ?? "",
+                    CategoryNames = new List<string>(),
+                    Formats = SelectedBook.BookFormats.Select(f => new CreateBookFormatDto { Format = f.Type, Price = f.Price, Stock = f.Stock }).ToList()
+                };
+            }
+            else
+            {
+                bookModel.Formats.Add(new CreateBookFormatDto { Format = 0, Price = 0, Stock = 0 });
+                bookModel.Formats.Add(new CreateBookFormatDto { Format = 1, Price = 0, Stock = 0 });
+            }
+        }
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            var cats = await Http.GetFromJsonAsync<List<CategoryDto>>("api/categories");
+            AvailableCategories = cats ?? new List<CategoryDto>();
+        }
+        catch
+        {
+            AvailableCategories = new List<CategoryDto>();
         }
     }
 
@@ -205,7 +250,7 @@
         try
         {
             // Giả lập lấy dữ liệu sách (Bạn sửa lại theo API trả về BookDto của bạn)
-            var existingBook = await Http.GetFromJsonAsync<BookDto>($"api/books/{id}");
+            var existingBook = await Http.GetFromJsonAsync<BookAdminDto>($"api/books/admin/{id}");
 
             if (existingBook != null)
             {
@@ -216,11 +261,8 @@
                     Publisher = existingBook.Publisher,
                     CoverImageUrl = existingBook.ImageUrl,
                     AuthorName = existingBook.AuthorName ?? "",
-                    // Map danh mục (Nếu API BookDto trả về CategoryNames)
-                    // CategoryNames = existingBook.Categories.Select(c => c.Name).ToList(),
-
-                    // Map các định dạng
-                    // Formats = existingBook.BookFormats.Select(...).ToList()
+                    CategoryNames = new List<string>(),
+                    Formats = existingBook.BookFormats.Select(f => new CreateBookFormatDto { Format = f.Type, Price = f.Price, Stock = f.Stock }).ToList()
                 };
             }
         }
@@ -253,6 +295,16 @@
                 bookModel.CategoryNames.Add(formattedCat);
             }
             categoryInput = string.Empty;
+        }
+    }
+
+    private void OnCategorySelectChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(val))
+        {
+            categoryInput = val;
+            AddCategory();
         }
     }
 

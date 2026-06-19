@@ -1,0 +1,242 @@
+﻿@page "/audit-logs"
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold text-primary mb-0"><i class="bx bx-history me-2"></i>Nhật ký Hoạt động Hệ thống</h4>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="LoadLogs" disabled="@isLoading">
+            <i class="bx bx-refresh @(isLoading ? "bx-spin" : "") me-1"></i> Làm mới
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-4">Thời gian</th>
+                            <th scope="col">Người thực hiện</th>
+                            <th scope="col">Hành động</th>
+                            <th scope="col">Bảng dữ liệu</th>
+                            <th scope="col" class="text-center pe-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (isLoading)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2 text-muted">Đang tải nhật ký...</div>
+                                </td>
+                            </tr>
+                        }
+                        else if (logs == null || !logs.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bx bx-data fs-1 opacity-50 mb-2"></i>
+                                    <p class="mb-0">Chưa có dữ liệu nhật ký hệ thống.</p>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var log in logs)
+                            {
+                                <tr @onclick="() => ToggleDetails(log.Id)" style="cursor: pointer;">
+                                    <td class="ps-4">
+                                        <span class="fw-semibold">@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span><br />
+                                        <small class="text-muted">@log.CreatedAt.ToLocalTime().ToString("HH:mm:ss")</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-secondary rounded-circle text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                @(string.IsNullOrWhiteSpace(log.AdminName) ? "S" : log.AdminName.Substring(0, 1).ToUpper())
+                                            </div>
+                                            <span class="fw-semibold">@log.AdminName</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetActionBadgeClass(log.ActionType) px-3 py-2 rounded-pill shadow-sm">
+                                            @log.ActionType
+                                        </span>
+                                    </td>
+                                    <td class="fw-medium text-dark">
+                                        <div class="d-flex flex-column">
+                                            <div>@log.TableName</div>
+                                            @if (!string.IsNullOrEmpty(log.ChangesSummary))
+                                            {
+                                                <small class="text-muted">@log.ChangesSummary</small>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <div class="d-flex justify-content-center gap-2 align-items-center">
+                                            @if (log.ActionType.StartsWith("UNDO_"))
+                                            {
+                                                <span class="text-muted small fst-italic"><i class="bx bx-check-shield me-1"></i>Đã hoàn tác</span>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @onclick="@(async () => { await ConfirmUndo(log); })" disabled="@isProcessing">
+                                                    <i class="bx bx-undo me-1"></i> Hoàn tác
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr class="bg-light" hidden="@(!IsExpanded(log.Id))">
+                                    <td colspan="5" class="py-3">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                @if (!string.IsNullOrEmpty(log.ChangesSummary))
+                                                {
+                                                    <div class="mb-2"><strong>Tóm tắt:</strong> @log.ChangesSummary</div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="mb-2 text-muted">Không có tóm tắt thay đổi.</div>
+                                                }
+
+                                                @if (log.OldValues != null || log.NewValues != null)
+                                                {
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-bordered mb-0">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th style="width: 30%">Trường</th>
+                                                                    <th style="width: 35%">Cũ</th>
+                                                                    <th style="width: 35%">Mới</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @{ 
+                                                                    var keys = new HashSet<string>();
+                                                                    if (log.OldValues != null) foreach (var k in log.OldValues.Keys) keys.Add(k);
+                                                                    if (log.NewValues != null) foreach (var k in log.NewValues.Keys) keys.Add(k);
+                                                                }
+                                                                @foreach (var key in keys)
+                                                                {
+                                                                    <tr>
+                                                                        <td class="text-muted">@key</td>
+                                                                        <td>@(log.OldValues != null && log.OldValues.ContainsKey(key) ? (log.OldValues[key] ?? "(null)") : "(n/a)")</td>
+                                                                        <td>@(log.NewValues != null && log.NewValues.ContainsKey(key) ? (log.NewValues[key] ?? "(null)") : "(n/a)")</td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-muted">Không có dữ liệu chi tiết để hiển thị.</div>
+                                                }
+                                            </div>
+
+
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<AuditLogDto> logs = new();
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private HashSet<int> expandedIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLogs();
+    }
+
+    private async Task LoadLogs()
+    {
+        isLoading = true;
+        try
+        {
+            // Lấy 50 hành động gần nhất từ API gateway
+            var result = await Http.GetFromJsonAsync<List<AuditLogDto>>("api/admins/audit-logs/recent?take=50");
+            logs = result ?? new List<AuditLogDto>();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Error("Lỗi tải dữ liệu: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConfirmUndo(AuditLogDto log)
+    {
+
+        bool isConfirmed = await JSR.InvokeAsync<bool>("confirm", $"CẢNH BÁO: Bạn có chắc chắn muốn HOÀN TÁC hành động [{log.ActionType}] trên bảng [{log.TableName}] (ID: {log.RecordId}) không?\n\nHành động này sẽ khôi phục dữ liệu về trạng thái trước đó.");
+
+        if (!isConfirmed) return;
+
+        isProcessing = true;
+        try
+        {
+            var response = await Http.PostAsync($"api/admins/audit-logs/{log.Id}/undo", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadFromJsonAsync<ApiResponse?>();
+                NotificationService.Error(err?.Message ?? "Không thể hoàn tác hành động.");
+            }
+            else
+            {
+                var apiResp = await response.Content.ReadFromJsonAsync<ApiResponse?>();
+                if (apiResp != null && apiResp.Success)
+                {
+                    NotificationService.Success(apiResp.Message ?? "Hoàn tác dữ liệu thành công!");
+                    await LoadLogs();
+                }
+                else
+                {
+                    NotificationService.Error(apiResp?.Message ?? "Không thể hoàn tác hành động.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Error("Không thể hoàn tác! Chi tiết lỗi: " + ex.Message);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    // Hàm hỗ trợ: Định dạng màu sắc Badge dựa trên loại hành động
+    private string GetActionBadgeClass(string actionType)
+    {
+        return actionType.ToUpper() switch
+        {
+            "INSERT" or "CREATE" => "bg-success",
+            "UPDATE" => "bg-warning text-dark",
+            "DELETE" => "bg-danger",
+            var a when a.StartsWith("UNDO") => "bg-secondary",
+            _ => "bg-primary"
+        };
+    }
+
+    private void ToggleDetails(int id)
+    {
+        if (expandedIds.Contains(id)) expandedIds.Remove(id);
+        else expandedIds.Add(id);
+    }
+
+    private bool IsExpanded(int id) => expandedIds.Contains(id);
+}

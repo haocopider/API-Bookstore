@@ -35,14 +35,19 @@ public partial class AppDbContext : DbContext
         return result;
     }
 
-    private List<AuditEntry> OnBeforeSaveChanges()
-    {
-        ChangeTracker.DetectChanges();
-        var auditEntries = new List<AuditEntry>();
+        private List<AuditEntry> OnBeforeSaveChanges()
+        {
+            ChangeTracker.DetectChanges();
+            var auditEntries = new List<AuditEntry>();
 
-        // Lấy Id của người dùng từ Token (Admin)
-        var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        int? adminId = int.TryParse(userIdClaim, out var id) ? id : null;
+            // Lấy Id của người dùng từ Token (Admin)
+            // Try 'sub' (JwtRegisteredClaimNames.Sub) first, then fallback to NameIdentifier
+            string? subClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            string? nameIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            int? adminId = null;
+            if (!string.IsNullOrEmpty(subClaim) && int.TryParse(subClaim, out var sid)) adminId = sid;
+            else if (!string.IsNullOrEmpty(nameIdClaim) && int.TryParse(nameIdClaim, out var nid)) adminId = nid;
 
         foreach (var entry in ChangeTracker.Entries())
         {

@@ -19,5 +19,9 @@ namespace Bookstore.Shared.Interfaces
         Task<bool> CreateRoleAsync(CreateRoleRequest request);
         Task<bool> UpdateRolePermissionsAsync(int id, List<int> permissionIds);
         Task<IEnumerable<PermissionDto>> GetAllPermissionsAsync();
+
+        //Quản lý hành động 
+        Task<List<AuditLogDto>> GetRecentLogsAsync(int take = 50);
+        Task<bool> UndoActionAsync(int auditLogId, int currentAdminId);
     }
 }

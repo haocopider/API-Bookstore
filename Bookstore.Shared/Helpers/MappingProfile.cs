@@ -9,10 +9,12 @@ namespace Bookstore.Shared.Helpers
         public MappingProfile()
         {
             CreateMap<Book, BookDto>()
-                            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.CoverImageUrl))
-                            .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author != null ? src.Author.Name : "Đang cập nhật"))
-                            .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
-                                src.BookFormats.Any() ? src.BookFormats.Min(f => f.Price) : 0));
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.CoverImageUrl))
+                .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author != null ? src.Author.Name : "Đang cập nhật"))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
+                    src.BookFormats.Any() ? src.BookFormats.Min(f => f.Price) : 0))
+                .ForMember(dest => dest.BookFormats, opt => opt.MapFrom(src => src.BookFormats));
+            CreateMap<BookFormat, BookFormatDto>();
 
             CreateMap<Book, BookAdminDto>()
                 .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.CoverImageUrl))
@@ -21,7 +23,9 @@ namespace Bookstore.Shared.Helpers
                     src.BookFormats.Any() ? src.BookFormats.Min(f => f.Price) : 0))
                 .ForMember(dest => dest.Stock, opt => opt.MapFrom(src =>
                     src.BookFormats.Any() ? src.BookFormats.Sum(f => f.Stock) : 0))
-                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.CreatedAt));
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.BookFormats, opt => opt.MapFrom(src => src.BookFormats))
+                .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories));
 
             CreateMap<Review, ReviewBookDto>();
             CreateMap<Author, AuthorDto>().ForMember(dest => dest.Books, opt => opt.MapFrom(src => src.Books)); ;

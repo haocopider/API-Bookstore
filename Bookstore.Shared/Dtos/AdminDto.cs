@@ -155,4 +155,23 @@ namespace Bookstore.Shared.Dtos
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    // --- Audit Log DTO ---
+    public class AuditLogDto
+    {
+        public int Id { get; set; }
+        public string? AdminName { get; set; }
+        public string ActionType { get; set; } = null!;
+        public string TableName { get; set; } = null!;
+        public string? RecordId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        // Raw values (deserialized from stored JSON) to help client render clear diffs
+        public Dictionary<string, string>? OldValues { get; set; }
+        public Dictionary<string, string>? NewValues { get; set; }
+
+        // Human friendly summary of what changed (e.g. "Name: A -> B; Price: 100 -> 120")
+        public string? ChangesSummary { get; set; }
+
+        public string Description => $"{ActionType} bản ghi #{RecordId} trên bảng {TableName}";
+    }
 }

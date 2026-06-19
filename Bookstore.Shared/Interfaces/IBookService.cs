@@ -20,5 +20,7 @@ namespace Bookstore.Shared.Interfaces
         Task<bool> CreateBookAsync(CreateBookDto request);
         Task<bool> UpdateBookAsync(int id, UpdateBookDto request);
         Task<bool> RestockAsync(RestockDto request);
+        Task<bool> DeleteBookAsync(int id);
+        Task<BookAdminDto> GetBookAdminByIdAsync(int id);
     }
 }

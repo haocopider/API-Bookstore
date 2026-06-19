@@ -20,6 +20,10 @@ namespace Bookstore.Shared.Interfaces
         IRepository<Message> Messages { get; }
         IRepository<Conversation> Conversations { get; }
         IRepository<Notification> Notifications { get; }
+        IRepository<AuditLog> AuditLogs { get; }
         Task<int> CommitAsync();
+        Task ExecuteSqlRawAsync(string sql, params object[] parameters);
+        Task BeginTransactionAsync();
+        Task RollbackAsync();
     }
 }

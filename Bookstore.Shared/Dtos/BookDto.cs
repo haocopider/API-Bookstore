@@ -20,6 +20,7 @@ namespace Bookstore.Shared.Dtos
         public string? AuthorName { get; set; }
         public string? Publisher { get; set; }
         public decimal Price { get; set; }
+        public List<BookFormatDto> BookFormats { get; set; } = new List<BookFormatDto>();
         public PromotionInfoDTO? Promotion { get; set; }
     }
 
@@ -32,10 +33,21 @@ namespace Bookstore.Shared.Dtos
         public string? AuthorName { get; set; }
         public string? Publisher { get; set; }
         public decimal Price { get; set; }
+        public List<BookFormatDto> BookFormats { get; set; } = new List<BookFormatDto>();
+        public List<CategoryDto> Categories { get; set; } = new List<CategoryDto>();
         public PromotionInfoDTO? Promotion { get; set; }
         public int Stock { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? UpdatedBy { get; set; }
+    }
+
+    public class BookFormatDto
+    {
+        public int Id { get; set; }
+        public int Type { get; set; }
+        public decimal Price { get; set; }
+        public int Stock { get; set; }
+        public string? Sku { get; set; }
     }
 
     public class BookPerPage 
@@ -69,6 +81,7 @@ namespace Bookstore.Shared.Dtos
     {
         [Required]
         public int Format { get; set; }
+        public int? Id { get; set; }
         public decimal Price { get; set; }
         public int Stock { get; set; }
     }
@@ -81,6 +94,7 @@ namespace Bookstore.Shared.Dtos
         public string? CoverImageUrl { get; set; }
         public string AuthorName { get; set; } = null!;
         public List<string> CategoryNames { get; set; } = new List<string>();
+        public List<CreateBookFormatDto> Formats { get; set; } = new List<CreateBookFormatDto>();
     }
 
     public class RestockDto

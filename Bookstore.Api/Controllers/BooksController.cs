@@ -18,6 +18,23 @@ namespace Bookstore.Api.Controllers
             _bookService = bookService;
         }
 
+        [HttpDelete("admin/delete/{id}")]
+        [HasPermission("RESOUCRES.DELETE")]
+        public async Task<IActionResult> DeleteBook(int id)
+        {
+            try
+            {
+                var success = await _bookService.DeleteBookAsync(id);
+                if (success) return Ok(new ApiResponse { Success = true, Message = "Xóa sách thành công." });
+
+                return NotFound(new ApiResponse { Success = false, Message = "Không tìm thấy sách hoặc đã xóa." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Lỗi hệ thống: " + ex.Message });
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
@@ -87,6 +104,15 @@ namespace Bookstore.Api.Controllers
         {
             var books = await _bookService.GetAllBooksForAdminAsync(filter);
             return Ok(books);
+        }
+
+        [HttpGet("admin/{id}")]
+        [HasPermission("RESOUCRES.VIEW")]
+        public async Task<IActionResult> GetBookForAdmin(int id)
+        {
+            var book = await _bookService.GetBookAdminByIdAsync(id);
+            if (book == null) return NotFound(new { Message = "Không tìm thấy sách." });
+            return Ok(book);
         }
 
         [HttpPost("admin/create")]
